@@ -1,0 +1,36 @@
+#!/bin/sh
+# python-config wrapper trying to fix the python versioning hell
+# -- pancake
+
+PCS="${PYTHON_CONFIG}
+	python3-config
+	python38-config
+	python3.8-config
+	python37-config
+	python3.7-config
+	python36-config
+	python3.6-config
+	python-config"
+
+PYCFG=""
+
+for a in ${PCS} ; do
+	$a --help >/dev/null 2>&1
+	if [ $? = 0 ]; then
+		PYCFG=$a
+		break
+	fi
+done
+
+[ -z "${PYCFG}" ] && exit 1
+if [ "$1" = "-n" ]; then
+	echo "${PYCFG}"
+	exit 0
+fi
+
+"${PYCFG}" "$@" | sed \
+	-e 's/-arch [^\ ]*//g' \
+	-e 's, s ,,g' \
+	-e 's,-mn[^\ ]*,,g' \
+	-e 's,-fn[^\ ]*,,g' \
+	-e 's,-Wstrict-prototypes,,g' 2>/dev/null

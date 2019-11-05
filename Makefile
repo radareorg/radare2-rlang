@@ -36,9 +36,9 @@ lang_python.${EXT_SO}:
 	$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --cflags --libs r_reg r_core r_cons) \
 	${LDFLAGS_LIB} -o lang_python.${EXT_SO} python.c -lpython37
 else
-PYCFLAGS=$(shell python-config --includes) -DPYVER=3
-PYLDFLAGS=$(shell python-config --libs)
-PYLDFLAGS+=-L$(shell python-config --prefix)/lib
+PYCFLAGS=$(shell PYVER=3 ./python-config-wrapper --includes) -DPYVER=3
+PYLDFLAGS=$(shell PYVER=3 ./python-config-wrapper --libs)
+PYLDFLAGS+=-L$(shell PYVER=3 ./python-config-wrapper --prefix)/lib
 PYLDFLAGS+=${LDFLAGS_LIB}
 
 lang_python.$(EXT_SO):
