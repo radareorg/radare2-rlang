@@ -6,7 +6,7 @@ CFLAGS+=-DPREFIX=\"${PREFIX}\"
 
 DUK_CFLAGS+=-Wall -DPREFIX=\"${PREFIX}\" -I. -Iduk
 
-R2PM_PLUGDIR?=$(shell r2 -H R2_USER_PLUGINS)
+R2PM_PLUGDIR?=${R2_PLUGIN_PATH}
 EXT_SO?=$(shell r2 -H LIBEXT)
 
 ifeq ($(EXT_SO),)
@@ -36,7 +36,7 @@ lang_python.${EXT_SO}:
 	$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --cflags --libs r_reg r_core r_cons) \
 	${LDFLAGS_LIB} -o lang_python.${EXT_SO} python.c -lpython37
 else
-PYCFLAGS=$(shell python-config --cflags) -DPYVER=3
+PYCFLAGS=$(shell python-config --includes) -DPYVER=3
 PYLDFLAGS=$(shell python-config --libs)
 PYLDFLAGS+=-L$(shell python-config --prefix)/lib
 PYLDFLAGS+=${LDFLAGS_LIB}
