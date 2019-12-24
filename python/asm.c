@@ -3,6 +3,24 @@
 #include "asm.h"
 #include "core.h"
 
+void py_export_asm_enum(PyObject *tp_dict) {
+
+#define PYENUM(name) {\
+		PyObject *o = PyLong_FromLong(name); \
+		if (o) { \
+			PyDict_SetItemString(tp_dict, #name, o); \
+			Py_DECREF(o); \
+		}\
+	}
+
+	// R_SYS_ENDIAN_*
+	PYENUM(R_SYS_ENDIAN_NONE);
+	PYENUM(R_SYS_ENDIAN_LITTLE);
+	PYENUM(R_SYS_ENDIAN_BIG);
+	PYENUM(R_SYS_ENDIAN_BI);
+#undef PYENUM
+}
+
 /* TODO : move into a struct stored in the plugin struct */
 static void *py_assemble_cb = NULL;
 static void *py_disassemble_cb = NULL;
