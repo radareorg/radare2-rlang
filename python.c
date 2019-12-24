@@ -204,6 +204,7 @@ static PyObject *init_radare_module(void) {
 	}
 	RadareType.tp_dict = PyDict_New();
 	py_export_anal_enum(RadareType.tp_dict);
+	py_export_asm_enum(RadareType.tp_dict);
 	PyObject *m = PyModule_Create (&EmbModule);
 	if (!m) {
 		eprintf ("Cannot create python3 r2 module\n");
