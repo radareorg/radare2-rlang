@@ -300,6 +300,7 @@ RLangPlugin PLUGIN_NAME = {
 	.alias = "python",
 	.ext = "py",
 	.desc = "Python language extension",
+	.license = "LGPL",
 	.init = &init,
 	.setup = &setup,
 	.fini = (void *)&fini,

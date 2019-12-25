@@ -1,6 +1,6 @@
 /* radare - LGPL - Copyright 2014-2019 pancake */
 
-#define _XOPEN_SOURCE 
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -340,7 +340,7 @@ static int lang_duktape_run(RLang *lang, const char *code, int len) {
 
 static int lang_duktape_file(RLang *lang, const char *file) {
 	int ret = -1;
-	char *code = r_file_slurp (file, NULL); 
+	char *code = r_file_slurp (file, NULL);
 	if (code) {
 		register_helpers (lang);
 		duk_push_lstring (ctx, code, strlen (code));
@@ -362,6 +362,7 @@ static RLangPlugin r_lang_plugin_duktape = {
 	.name = "duktape",
 	.ext = "duk",
 	.desc = "JavaScript extension language using DukTape",
+	.license = "LGPL",
 	.run = lang_duktape_run,
 	.init = (void*)lang_duktape_init,
 	.fini = (void*)lang_duktape_fini,

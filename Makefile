@@ -24,7 +24,7 @@ endif
 
 LDFLAGS_LIB=$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --libs-only-L r_core) -lr_core -lr_io -lr_util -shared -lr_asm
 
-LANGS?=python duktape
+LANGS?=py duktape
 
 all: $(LANGS)
 	@echo "LANG ${LANGS}"
