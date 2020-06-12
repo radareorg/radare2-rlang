@@ -28,7 +28,8 @@ if [ "$1" = "-n" ]; then
 	exit 0
 fi
 
-"${PYCFG}" "$@" | sed \
+output=`"${PYCFG}" "$@"` \
+      && echo $output || echo $output 1>&2 | sed \
 	-e 's/-arch [^\ ]*//g' \
 	-e 's, s ,,g' \
 	-e 's,-mn[^\ ]*,,g' \
