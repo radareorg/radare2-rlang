@@ -6,7 +6,7 @@
 #include <r_core.h>
 #include "common.h"
 
-RCore *core;
+extern RCore *core;
 
 void Radare_plugin_core_free(RCorePlugin *ap);
 

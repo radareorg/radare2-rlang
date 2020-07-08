@@ -40,7 +40,7 @@ PYCFLAGS=$(shell PYVER=3 ./python-config-wrapper --includes) -DPYVER=3
 # Python3.8+ requires new `--embed` flag to include `-lpython`. 
 PYLDFLAGS=$(shell PYVER=3 ./python-config-wrapper --libs --embed || \
                   PYVER=3 ./python-config-wrapper --libs)
-PYLDFLAGS+=-L$(shell PYVER=3 ./python-config-wrapper --prefix)/lib
+PYLDFLAGS+=$(shell PYVER=3 ./python-config-wrapper --ldflags)
 PYLDFLAGS+=${LDFLAGS_LIB}
 
 lang_python.$(EXT_SO):
