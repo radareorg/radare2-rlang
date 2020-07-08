@@ -136,7 +136,7 @@ static void *py_set_reg_profile_cb = NULL;
 static void *py_anal_cb = NULL;
 static void *py_archinfo_cb = NULL;
 
-static int py_set_reg_profile(RAnal *a) {
+static bool py_set_reg_profile(RAnal *a) {
 	const char *profstr = "";
 	if (py_set_reg_profile_cb) {
 		PyObject *result = PyObject_CallObject (py_set_reg_profile_cb, NULL);
