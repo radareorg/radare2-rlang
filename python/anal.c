@@ -125,7 +125,7 @@ void py_export_anal_enum(PyObject *tp_dict) {
 		val->delta = getI (dict, "delta"); \
 		val->imm = getI (dict, "imm"); \
 		val->mul = getI (dict, "mul"); \
-		val->sel = getI (dict, "sel"); \
+		val->seg = getI (dict, "seg"); \
 		tmpreg = getO (dict, "reg"); \
 		READ_REG(tmpreg, val->reg) \
 		tmpreg = getO (dict, "regdelta"); \
