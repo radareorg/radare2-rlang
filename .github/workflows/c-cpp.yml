@@ -1,0 +1,29 @@
+name: R2L
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: radare2
+      run: |
+          git clone --depth=1 https://github.com/radareorg/radare2
+          cd radare2
+          ./configure --prefix=/usr
+          make
+          sudo make install
+          cd ..
+    - name: configure
+      run: ./configure --prefix=/usr
+    - name: make
+      run: make
+    - name: install
+      run: make install
+    - name: make tests
+      run: make tests
