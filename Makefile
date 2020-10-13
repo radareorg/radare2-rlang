@@ -1,67 +1,9 @@
-R2_PLUGIN_PATH=$(shell r2 -H R2_USER_PLUGINS)
-R2_LIBDIR_PATH=$(shell r2 -H R2_LIBDIR)
-PKG_CONFIG_PATH=${R2_LIBDIR_PATH}/pkgconfig
-CFLAGS+=$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --cflags r_core)
-CFLAGS+=-DPREFIX=\"${PREFIX}\"
+include config.mk
 
-DUK_CFLAGS+=-Wall -DPREFIX=\"${PREFIX}\" -I. -Iduk
-
-R2PM_PLUGDIR?=${R2_PLUGIN_PATH}
-EXT_SO?=$(shell r2 -H LIBEXT)
-
-ifeq ($(EXT_SO),)
-ifeq ($(OSTYPE),darwin)
-CFLAGS+=-undefined dynamic_lookup
-EXT_SO=dylib
-else
-ifeq ($(OSTYPE),windows)
-EXT_SO=dll
-else
-EXT_SO=so
-endif
-endif
-endif
-
-LDFLAGS_LIB=$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --libs-only-L r_core) -lr_core -lr_io -lr_util -shared -lr_asm
-
-LANGS?=py duktape
+LANGS?=python duktape
 
 all: $(LANGS)
-	@echo "LANG ${LANGS}"
-
-ifeq ($(OSTYPE),windows)
-lang_python.${EXT_SO}:
-	${CC} ${CFLAGS} -I${HOME}/.wine/drive_c/Python37/include \
-	-L${HOME}/.wine/drive_c/Python37/libs \
-	$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --cflags --libs r_reg r_core r_cons) \
-	${LDFLAGS_LIB} -o lang_python.${EXT_SO} python.c -lpython37
-else
-PYCFLAGS=$(shell PYVER=3 ./python-config-wrapper --includes) -DPYVER=3
-# Python3.8+ requires new `--embed` flag to include `-lpython`. 
-PYLDFLAGS=$(shell PYVER=3 ./python-config-wrapper --libs --embed || \
-                  PYVER=3 ./python-config-wrapper --libs)
-PYLDFLAGS+=$(shell PYVER=3 ./python-config-wrapper --ldflags)
-PYLDFLAGS+=${LDFLAGS_LIB}
-
-lang_python.$(EXT_SO):
-	${CC} python.c python/*.c ${CFLAGS} ${PYCFLAGS} ${PYLDFLAGS} \
-	$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --cflags --libs r_reg r_core r_cons) \
-	${LDFLAGS} ${LDFLAGS_LIB} -fPIC -o lang_python.$(EXT_SO)
-endif
-
-py python:
-	rm -f lang_python.$(EXT_SO)
-	$(MAKE) lang_python.$(EXT_SO)
-
-py-clean:
-	rm -f python.o lang_python.$(EXT_SO)
-
-py-install python-install:
-	mkdir -p ${R2PM_PLUGDIR}
-	cp -f lang_python.$(EXT_SO) ${R2PM_PLUGDIR}
-
-py-uninstall python-uninstall:
-	rm -f ${R2PM_PLUGDIR}/lang_python.$(EXT_SO)
+	for LANG in $(LANGS); do $(MAKE) -C $${LANG} ; done
 
 duktape:
 	$(MAKE) lang_duktape.$(EXT_SO)
