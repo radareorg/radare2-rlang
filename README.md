@@ -1,7 +1,7 @@
 radare2-rlang
 =============
 
-| **GithubCI**  | [![Tests Status](https://github.com/radareorg/radare2-rlang/workflows/R2L/badge.svg)](https://github.com/radareorg/radare2-rlang/actions?query=workflow%3A%22R2L%22)|
+[![Tests Status](https://github.com/radareorg/radare2-rlang/workflows/R2L/badge.svg)](https://github.com/radareorg/radare2-rlang/actions?query=workflow%3A%22R2L%22)
 
 RLang plugins are used to instantiate a VM inside radare2 to run scripts by keeping the
 internal state alive along multiple executions. This is like interpretting scripts using

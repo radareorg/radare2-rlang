@@ -12,11 +12,7 @@ install-home:
 		cp -f *.$(EXT_SO) ${R2PM_PLUGDIR} || true
 
 uninstall:
-	mkdir -p $(DESTDIR)/$(R2_PLUGIN_PATH)
-	[ -n "`ls *.$(EXT_SO)`" ] && cp -f *.$(EXT_SO) 
-	rm -f $(DESTDIR)/$(R2_PLUGIN_PATH)/$(
+	rm -f $(DESTDIR)/$(R2_PLUGIN_PATH)/"`ls *.$(EXT_SO)`"
 
 uninstall-home:
-	mkdir -p ${R2PM_PLUGDIR}
-	[ -n "`ls *.$(EXT_SO)`" ] && \
-		cp -f *.$(EXT_SO) ${R2PM_PLUGDIR} || true
+	rm -f $(R2PM_PLUGDIR)/"`ls *.$(EXT_SO)`"
