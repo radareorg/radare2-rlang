@@ -1,0 +1,14 @@
+PKGNAME radare2-rlang
+VERSION 4.6.0-git
+CONTACT pancake ; pancake@nopcode.org
+
+REPORT PREFIX ;
+
+LANG_C!
+
+(( mandatory ))
+PKGCFG! R2_CFLAGS R2_LDFLAGS r_core
+
+ARG_WITH USEROSTYPE=auto ostype Choose OS type ( gnulinux windows darwin haiku ) ;
+
+SUBDIRS ./config.mk ;

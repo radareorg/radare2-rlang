@@ -1,0 +1,33 @@
+PREFIX=@PREFIX@
+
+R2_PLUGIN_PATH=$(shell r2 -H R2_USER_PLUGINS)
+R2_LIBDIR_PATH=$(shell r2 -H R2_LIBDIR)
+PKG_CONFIG_PATH=${R2_LIBDIR_PATH}/pkgconfig
+R2_PREFIX=$(shell r2 -H R2_PREFIX)
+
+ifeq ($(PREFIX),)
+PREFIX=$(R2_PREFIX)
+endif
+
+CFLAGS+=$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --cflags r_core)
+CFLAGS+=-DPREFIX=\"${PREFIX}\"
+
+DUK_CFLAGS+=-Wall -DPREFIX=\"${PREFIX}\" -I. -Iduk
+
+R2PM_PLUGDIR?=${R2_PLUGIN_PATH}
+EXT_SO?=$(shell r2 -H LIBEXT)
+
+ifeq ($(EXT_SO),)
+ifeq ($(OSTYPE),darwin)
+CFLAGS+=-undefined dynamic_lookup
+EXT_SO=dylib
+else
+ifeq ($(OSTYPE),windows)
+EXT_SO=dll
+else
+EXT_SO=so
+endif
+endif
+endif
+
+LDFLAGS_LIB=$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --libs-only-L r_core) -lr_core -lr_io -lr_util -shared -lr_asm
