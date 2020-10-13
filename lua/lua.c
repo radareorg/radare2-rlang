@@ -97,8 +97,8 @@ static int init(RLang *lang) {
 
 	//-- load template
 	/// DEPRECATED theres no need for this. better embed everything in into this .c
-	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/radare.lua");
-	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/radare.lua");
+	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
+	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
 	fflush (stdout);
 
 	return true;
