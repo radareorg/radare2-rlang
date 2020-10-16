@@ -1,0 +1,9 @@
+import("r2")
+ .then((r2) => {
+   var a = 1 + 2;
+   r2.log("hello world " + a);
+ })
+ .catch((err) => {
+   throw err;
+ });
+

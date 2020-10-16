@@ -13,6 +13,7 @@
 
 static RCore *Gcore = NULL;
 static JSContext *ctx = NULL;
+static JSRuntime *rt = NULL;
 static bool is_init = false;
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
@@ -83,7 +84,7 @@ static void register_helpers(RLang *lang) {
 	}
 	is_init = true;
 	Gcore = lang->user;
-	JSRuntime *rt = JS_NewRuntime();
+	rt = JS_NewRuntime();
 	ctx = JS_NewContext (rt);
 	JSModuleDef *m = JS_NewCModule (ctx, "r2", js_r2_init);
 	if (!m) {
@@ -98,6 +99,15 @@ static void register_helpers(RLang *lang) {
 #endif
 }
 
+static void eval_jobs(JSContext *ctx) {
+	JSContext * pctx = NULL;
+	do {
+		int res = JS_ExecutePendingJob (rt, &pctx);
+		if (res == -1) {
+			eprintf ("exception in job%c", 10);
+		}
+	} while (pctx);
+}
 
 static int eval(JSContext *ctx, const char *code) {
 	JSValue v = JS_Eval (ctx, code, strlen (code), "-", 0);
@@ -105,7 +115,8 @@ static int eval(JSContext *ctx, const char *code) {
 		js_std_dump_error (ctx);
 		JSValue e = JS_GetException (ctx);
 	}
-	return -1;
+	eval_jobs (ctx);
+	return 0;
 }
 
 static int lang_quickjs_run(RLang *lang, const char *code, int len) {
