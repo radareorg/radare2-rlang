@@ -4,13 +4,19 @@
 #include "r_core.h"
 #include "r_lang.h"
 
+static const char *r2v_sym = "r2v__entry";
+
 static int lang_v_file(RLang *lang, const char *file);
 
-static const char *r2v = \
-	"module main\n"
+static const char *r2v_head = \
+	"module r2v\n"
 //	"import r2.pipe\n"
-	"\n"
-	"#flag `pkg-config --cflags --libs r_core`\n"
+	"\n";
+
+static const char *r2v_body = \
+//	"#flag `pkg-config --cflags --libs r_core`\n"
+	"#flag -I/usr/local/include/libr -I/usr/local/include/libr/sdb -L/usr/local/lib -lr_core -lr_config -lr_debug -lr_bin -lr_anal -lr_bp -lr_egg -lr_asm -lr_lang -lr_parse -lr_flag -lr_reg -lr_search -lr_syscall -lr_fs -lr_io -lr_socket -lr_cons -lr_magic -lr_crypto -lr_hash -lr_util -ldl\n"
+	"#flag -I/usr/include/libr -I/usr/include/libr/sdb -L/usr/lib -lr_core -lr_config -lr_debug -lr_bin -lr_anal -lr_bp -lr_egg -lr_asm -lr_lang -lr_parse -lr_flag -lr_reg -lr_search -lr_syscall -lr_fs -lr_io -lr_socket -lr_cons -lr_magic -lr_crypto -lr_hash -lr_util -ldl\n"
 	"\n"
 	"#include <r_core.h>\n"
 	"\n"
@@ -22,7 +28,7 @@ static const char *r2v = \
 	"pub fn (core &R2)cmd(s string) string {\n"
 	"  unsafe {\n"
 	"    o := C.r_core_cmd_str (core, s.str)\n"
-	"    strs := string(byteptr(o))\n"
+	"    strs := o.vstring()\n"
 	"    free(o)\n"
 	"    return strs\n"
 	"  }\n"
@@ -32,7 +38,6 @@ static const char *r2v = \
 	"        return i64(core).str()\n"
 	"}\n"
 	"\n"
-	"fn main() {}\n"
 	"pub fn (core &R2)free() {\n"
 	"        unsafe {C.r_core_free (core)}\n"
 	"}\n"
@@ -40,23 +45,63 @@ static const char *r2v = \
 	"fn new() &R2 {\n"
 	"        return C.r_core_new ()\n"
 	"}\n";
-static const char *vsk = \
-	"fn entry(core &R2) {\n";
+
+typedef struct VParse {
+	RStrBuf *head;
+	RStrBuf *body;
+} VParse;
+
+static void vcode_fini(VParse *p) {
+	r_strbuf_free (p->head);
+	r_strbuf_free (p->body);
+}
+
+static VParse vcode_parse(const char *code) {
+	VParse vp = {0};
+	vp.head = r_strbuf_new ("");
+	vp.body = r_strbuf_new ("");
+	size_t i;
+	char *c = strdup (code);
+	char *p = c;
+	char *cp = c;
+	for (; *cp; cp++) {
+		if (*cp == '\n') {
+			*cp = 0;
+			if (r_str_startswith (p, "module")) {
+				// ignore r_strbuf_appendf (vp.head, "%s\n", p);
+			} else if (r_str_startswith (p, "import")) {
+				if (strchr (p, '(')) {
+					c[i] = '\n';
+				}
+				char *end = strchr (p, ')');
+				if (end) {
+					*end = 0;
+					cp = end + 1;
+				}
+				r_strbuf_appendf (vp.head, "%s\n", p);
+			} else {
+				r_strbuf_appendf (vp.body, "%s\n", p);
+			}
+			p = cp + 1;
+		}
+	}
+	//r_strbuf_appendf (vp.body, "%s\n", p);
+	free (c);
+	return vp;
+}
 
 static int __run(RLang *lang, const char *code, int len) {
 	FILE *fd = r_sandbox_fopen (".tmp.v", "w");
 	if (fd) {
-		fputs (r2v, fd);
-		if (len < 0) {
-			fputs (code, fd);
-		} else {
-			fputs (vsk, fd);
-			fputs (code, fd);
-			fputs ("}", fd);
-		}
+		VParse vcode = vcode_parse (code);
+		fputs (r2v_head, fd);
+		fputs (r_strbuf_get (vcode.head), fd);
+		fputs (r2v_body, fd);
+		fputs (r_strbuf_get (vcode.body), fd);
 		fclose (fd);
 		lang_v_file (lang, ".tmp.v");
 		r_file_rm (".tmp.v");
+		vcode_fini (&vcode);
 		return true;
 	}
 	eprintf ("Cannot open .tmp.v\n");
@@ -89,34 +134,30 @@ static int lang_v_file(RLang *lang, const char *file) {
 		libname = name;
 	}
 	r_sys_setenv ("PKG_CONFIG_PATH", R2_LIBDIR"/pkgconfig");
-	char *shl = r_str_newf ("%s/r2v%s.lib", libpath, libname);
-	char *she = r_str_newf ("%s/r2v%s.lib."R_LIB_EXT, libpath, libname);
-	char *buf = r_str_newf ("v -shared -o %s %s", shl, file);
-	eprintf ("v -shared -o %s %s", shl, file);
+	char *lib = r_str_replace (strdup (file), ".v", "."R_LIB_EXT, 1);
+	char *buf = r_str_newf ("v -shared %s", file);
 	free (name);
 	if (r_sandbox_system (buf, 1) != 0) {
 		free (buf);
-		free (she);
-		free (shl);
+		free (lib);
 		return false;
 	}
-	void *lib = r_lib_dl_open (she);
-	if (lib) {
+	free (buf);
+	void *vl = r_lib_dl_open (lib);
+	if (vl) {
 		void (*fcn)(RCore *, int argc, const char **argv);
-		fcn = r_lib_dl_sym (lib, "entry");
+		fcn = r_lib_dl_sym (vl, r2v_sym);
 		if (fcn) {
 			fcn (lang->user, 0, NULL);
 		} else {
-			eprintf ("Cannot find 'entry' symbol in library\n");
+			eprintf ("Cannot find '%s' symbol in library\n", r2v_sym);
 		}
-		r_lib_dl_close (lib);
+		r_lib_dl_close (vl);
 	} else {
-		eprintf ("Cannot open '%s' library\n", she);
+		eprintf ("Cannot open '%s' library\n", lib);
 	}
-	r_file_rm (she);
-	free (shl);
-	free (she);
-	free (buf);
+	r_file_rm (lib);
+	free (lib);
 	return 0;
 }
 
@@ -132,3 +173,10 @@ static RLangPlugin r_lang_plugin_v = {
 	.run = lang_v_run,
 	.run_file = (void*)lang_v_file,
 };
+
+#ifndef CORELIB
+struct r_lib_struct_t radare_plugin = {
+	.type = R_LIB_TYPE_LANG,
+	.data = &r_lang_plugin_v,
+};
+#endif
