@@ -30,3 +30,10 @@ hello
 world
 [0x00000000]> q
 ```
+
+Pending stuff:
+--------------
+
+* [ ] Support cmdj() with x.json2 or so
+* [ ] Basic r2pipe-api on top of it
+* [ ] Support writing asm/bin/.. plugins in V-rlang
