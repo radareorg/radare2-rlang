@@ -1,6 +1,6 @@
 import os
 import json
-import x.json2
+// import x.json2
 
 
 struct Core {

@@ -14,9 +14,7 @@ static const char *r2v_head = \
 	"\n";
 
 static const char *r2v_body = \
-//	"#flag `pkg-config --cflags --libs r_core`\n"
-	"#flag -I/usr/local/include/libr -I/usr/local/include/libr/sdb -L/usr/local/lib -lr_core -lr_config -lr_debug -lr_bin -lr_anal -lr_bp -lr_egg -lr_asm -lr_lang -lr_parse -lr_flag -lr_reg -lr_search -lr_syscall -lr_fs -lr_io -lr_socket -lr_cons -lr_magic -lr_crypto -lr_hash -lr_util -ldl\n"
-	"#flag -I/usr/include/libr -I/usr/include/libr/sdb -L/usr/lib -lr_core -lr_config -lr_debug -lr_bin -lr_anal -lr_bp -lr_egg -lr_asm -lr_lang -lr_parse -lr_flag -lr_reg -lr_search -lr_syscall -lr_fs -lr_io -lr_socket -lr_cons -lr_magic -lr_crypto -lr_hash -lr_util -ldl\n"
+	"#pkgconfig --cflags --libs r_core\n"
 	"\n"
 	"#include <r_core.h>\n"
 	"\n"
