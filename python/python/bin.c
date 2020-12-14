@@ -313,7 +313,7 @@ static bool py_load_buffer(RBinFile *arch, void **bin_obj, RBuffer *buf, ut64 lo
 			PyErr_Print();
 			return false;
 		}
-		PyObject *result = PyEval_CallObject (py_load_buffer_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_load_buffer_cb, arglist);
 		if (result && PyList_Check (result)) {
 			PyObject *res = PyList_GetItem (result, 0);
 			rres = PyNumber_AsSsize_t (res, NULL);
@@ -354,7 +354,7 @@ static bool py_check_buffer(RBuffer *buf)
 			PyErr_Print();
 			return false;
 		}
-		PyObject *result = PyEval_CallObject (py_check_buffer_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_check_buffer_cb, arglist);
 		if (result && PyList_Check (result)) {
 			PyObject *res = PyList_GetItem (result, 0);
 			rres = PyNumber_AsSsize_t (res, NULL);
@@ -379,7 +379,7 @@ static void py_destroy(RBinFile *arch) {
 			PyErr_Print();
 			return;
 		}
-		PyObject *result = PyEval_CallObject (py_destroy_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_destroy_cb, arglist);
 		if (!(result && PyList_Check (result))) {
 			eprintf ("destroy: Unknown type returned. List was expected.\n");
 		}
@@ -398,7 +398,7 @@ static ut64 py_baddr(RBinFile *arch) {
 			PyErr_Print();
 			return 0;
 		}
-		PyObject *result = PyEval_CallObject (py_baddr_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_baddr_cb, arglist);
 		if (result && PyList_Check (result)) {
 			PyObject *res = PyList_GetItem (result, 0);
 			rres = PyLong_AsLong (res);
@@ -426,7 +426,7 @@ static RBinAddr* py_binsym(RBinFile *arch, int sym) {
 			PyErr_Print();
 			return NULL;
 		}
-		PyObject *result = PyEval_CallObject (py_binsym_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_binsym_cb, arglist);
 		if (result && PyList_Check (result)) {
 			// dict -> RBinEntry
 			// "vaddr" : vaddr,
@@ -464,7 +464,7 @@ static RList* py_entries(RBinFile *arch) {
 			PyErr_Print();
 			return NULL;
 		}
-		PyObject *result = PyEval_CallObject (py_entries_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_entries_cb, arglist);
 		if (result && PyList_Check (result)) {
 			listsz = PyList_Size(result);
 			for (i = 0; i < listsz; i++) {
@@ -508,7 +508,7 @@ static RList* py_sections(RBinFile *arch) {
 			PyErr_Print();
 			return NULL;
 		}
-		PyObject *result = PyEval_CallObject (py_sections_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_sections_cb, arglist);
 		if (result && PyList_Check (result)) {
 			listsz = PyList_Size(result);
 			for (i = 0; i < listsz; i++) {
@@ -543,7 +543,7 @@ static RList* py_imports(RBinFile *arch) {
 			PyErr_Print();
 			return NULL;
 		}
-		PyObject *result = PyEval_CallObject (py_imports_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_imports_cb, arglist);
 		if (result && PyList_Check (result)) {
 			listsz = PyList_Size(result);
 			for (i = 0; i < listsz; i++) {
@@ -578,7 +578,7 @@ static RList* py_symbols(RBinFile *arch) {
 			PyErr_Print();
 			return 0;
 		}
-		PyObject *result = PyEval_CallObject (py_symbols_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_symbols_cb, arglist);
 		if (result && PyList_Check (result)) {
 			listsz = PyList_Size(result);
 			for (i = 0; i < listsz; i++) {
@@ -613,7 +613,7 @@ static RList* py_relocs(RBinFile *arch) {
 			PyErr_Print();
 			return 0;
 		}
-		PyObject *result = PyEval_CallObject (py_relocs_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_relocs_cb, arglist);
 		if (result && PyList_Check (result)) {
 			listsz = PyList_Size(result);
 			for (i = 0; i < listsz; i++) {
@@ -646,7 +646,7 @@ static RBinInfo *py_info(RBinFile *arch) {
 			PyErr_Print();
 			return NULL;
 		}
-		PyObject *result = PyEval_CallObject (py_info_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_info_cb, arglist);
 		if (result && PyList_Check (result)) {
 			PyObject *dict = PyList_GetItem (result, 0);
 			/* TODO: Check for empty values first! */
@@ -682,8 +682,8 @@ void Radare_plugin_bin_free(RBinPlugin *bp) {
 PyObject *Radare_plugin_bin(Radare* self, PyObject *args) {
 	void *ptr = NULL;
 	init_pybinfile_module ();
-	PyObject *arglist = Py_BuildValue("(i)", 0);
-	PyObject *o = PyEval_CallObject (args, arglist);
+	PyObject *arglist = Py_BuildValue ("(i)", 0);
+	PyObject *o = PyObject_CallObject (args, arglist);
 
 	RBinPlugin *bp = R_NEW0 (RBinPlugin);
 	bp->name = getS (o,"name");

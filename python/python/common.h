@@ -5,6 +5,8 @@
 #include <r_lib.h>
 #include <r_lang.h>
 
+#undef HAVE_SIGACTION
+
 #undef _GNU_SOURCE
 #undef _XOPEN_SOURCE
 #undef _POSIX_C_SOURCE

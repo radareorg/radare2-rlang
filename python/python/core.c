@@ -10,7 +10,7 @@ static void *py_core_call_cb = NULL;
 static int py_core_call(void *user, const char *str) {
 	if (py_core_call_cb) {
 		PyObject *arglist = Py_BuildValue ("(z)", str);
-		PyObject *result = PyEval_CallObject (py_core_call_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_core_call_cb, arglist);
 		const char * str_res = NULL;
 		if (result) {
 			if (PyLong_Check (result)) {
@@ -54,7 +54,7 @@ void Radare_plugin_core_free(RCorePlugin *ap) {
 PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 	void *ptr = NULL;
 	PyObject *arglist = Py_BuildValue("(i)", 0);
-	PyObject *o = PyEval_CallObject (args, arglist);
+	PyObject *o = PyObject_CallObject (args, arglist);
 
 	RCorePlugin *ap = R_NEW0 (RCorePlugin);
 	ap->name = getS (o, "name");

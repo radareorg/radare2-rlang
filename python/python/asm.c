@@ -56,7 +56,7 @@ static int py_assemble(RAsm *a, RAsmOp *op, const char *str) {
 	ut8 *buf = (ut8*)r_strbuf_get (&op->buf);
 	if (py_assemble_cb) {
 		PyObject *arglist = Py_BuildValue ("(zK)", str, a->pc);
-		PyObject *result = PyEval_CallObject (py_assemble_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_assemble_cb, arglist);
 		if (check_list_result (result, "assemble")) {
 			seize = size = PyList_Size (result);
 			for (i = 0; i < size ; i++) {
@@ -87,7 +87,7 @@ static int py_disassemble(RAsm *a, RAsmOp *op, const ut8 *buf, int len) {
 		};
 		PyObject *memview = PyMemoryView_FromBuffer (&pybuf);
 		PyObject *arglist = Py_BuildValue ("(NK)", memview, a->pc);
-		PyObject *result = PyEval_CallObject (py_disassemble_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_disassemble_cb, arglist);
 		if (check_list_result (result, "disassemble")) {
 			PyObject *pylen = PyList_GetItem (result, 0);
 			PyObject *pystr = PyList_GetItem (result, 1);
@@ -117,7 +117,7 @@ void Radare_plugin_asm_free(RAsmPlugin *ap) {
 
 PyObject *Radare_plugin_asm(Radare* self, PyObject *args) {
 	PyObject *arglist = Py_BuildValue ("(i)", 0);
-	PyObject *o = PyEval_CallObject (args, arglist);
+	PyObject *o = PyObject_CallObject (args, arglist);
 
 	RAsmPlugin *ap = R_NEW0 (RAsmPlugin);
 	if (!ap) {

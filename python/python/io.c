@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2009-2019 - pancake */
+/* radare - LGPL - Copyright 2009-2020 - pancake */
 
 #include "io.h"
 #include "core.h"
@@ -15,7 +15,7 @@ static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 	if (py_io_open_cb) {
 		int fd = -1;
 		PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
-		PyObject *result = PyEval_CallObject (py_io_open_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_io_open_cb, arglist);
 		if (result) {
 			if (PyLong_Check (result)) {
 				if (PyLong_AsLong (result) == -1) {
@@ -42,7 +42,7 @@ static bool py_io_check(RIO *io, const char *path, bool many) {
 	bool res = false;
 	if (py_io_check_cb) {
 		PyObject *arglist = Py_BuildValue ("(zO)", path, many?Py_True:Py_False);
-		PyObject *result = PyEval_CallObject (py_io_check_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_io_check_cb, arglist);
 		if (result && PyBool_Check (result)) {
 			res = result == Py_True;
 		}
@@ -55,7 +55,7 @@ static bool py_io_check(RIO *io, const char *path, bool many) {
 static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
 	if (py_io_seek_cb) {
 		PyObject *arglist = Py_BuildValue ("(Ki)", offset, whence);
-		PyObject *result = PyEval_CallObject (py_io_seek_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_io_seek_cb, arglist);
 		if (result && PyLong_Check (result)) {
 			return io->off = PyLong_AsLong (result);
 		}
@@ -80,7 +80,7 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 		return -1;
 	}
 	PyObject *arglist = Py_BuildValue ("(Ki)", io->off, count);
-	PyObject *result = PyEval_CallObject (py_io_read_cb, arglist);
+	PyObject *result = PyObject_CallObject (py_io_read_cb, arglist);
 	if (result) {
 		if (PyByteArray_Check (result)) {
 			const char *ptr = PyByteArray_AsString (result);
@@ -127,7 +127,7 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 	char * res = NULL;
 	if (py_io_system_cb) {
 		PyObject *arglist = Py_BuildValue ("(z)", cmd);
-		PyObject *result = PyEval_CallObject (py_io_system_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_io_system_cb, arglist);
 		if (result) {
 			if (
 			PyUnicode_Check (result)
@@ -158,7 +158,7 @@ void Radare_plugin_io_free(RIOPlugin *ap) {
 PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	void *ptr = NULL;
 	PyObject *arglist = Py_BuildValue("(i)", 0);
-	PyObject *o = PyEval_CallObject (args, arglist);
+	PyObject *o = PyObject_CallObject (args, arglist);
 
 	RIOPlugin *ap = R_NEW0 (RIOPlugin);
 	if (!ap) {

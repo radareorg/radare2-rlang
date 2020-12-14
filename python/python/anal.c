@@ -125,7 +125,7 @@ void py_export_anal_enum(PyObject *tp_dict) {
 		val->delta = getI (dict, "delta"); \
 		val->imm = getI (dict, "imm"); \
 		val->mul = getI (dict, "mul"); \
-		val->seg = getI (dict, "seg"); \
+		/* val->seg = getI (dict, "seg"); */ \
 		tmpreg = getO (dict, "reg"); \
 		READ_REG(tmpreg, val->reg) \
 		tmpreg = getO (dict, "regdelta"); \
@@ -169,7 +169,7 @@ static int py_anal(RAnal *a, RAnalOp *op, ut64 addr, const ut8 *buf, int len, RA
 		};
 		PyObject *memview = PyMemoryView_FromBuffer (&pybuf);
 		PyObject *arglist = Py_BuildValue ("(NK)", memview, addr);
-		PyObject *result = PyEval_CallObject (py_anal_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_anal_cb, arglist);
 		if (result && PyList_Check (result)) {
 			PyObject *len = PyList_GetItem (result, 0);
 			PyObject *dict = PyList_GetItem (result, 1);
@@ -193,12 +193,12 @@ static int py_anal(RAnal *a, RAnalOp *op, ut64 addr, const ut8 *buf, int len, RA
 					for (i = 0; i < 3; i++) {
 						PyObject *tmplst = PyList_GetItem (tmpsrc, i);
 						// Read value and underlying regs
-						READ_VAL(tmplst, op->src[i], tmpreg)
+						READ_VAL (tmplst, op->src[i], tmpreg)
 					}
 				}
 				PyObject *tmpdst = getO (dict, "dst");
 				// Read value and underlying regs
-				READ_VAL(tmpdst, op->dst, tmpreg)
+				READ_VAL (tmpdst, op->dst, tmpreg)
 				// Loading 'var' value if presented
 				r_strbuf_set (&op->esil, getS (dict, "esil"));
 				op->mnemonic = r_str_new (getS (dict, "mnemonic"));
@@ -208,7 +208,7 @@ static int py_anal(RAnal *a, RAnalOp *op, ut64 addr, const ut8 *buf, int len, RA
 			Py_DECREF (result);
 		} else {
 			eprintf ("Unknown type returned. List was expected.\n");
-			PyErr_Print();
+			PyErr_Print ();
 		}
 	}
 	op->size = size = seize;
@@ -218,7 +218,7 @@ static int py_anal(RAnal *a, RAnalOp *op, ut64 addr, const ut8 *buf, int len, RA
 static int py_archinfo(RAnal *a, int query) {
 	if (py_archinfo_cb) {
 		PyObject *arglist = Py_BuildValue ("(i)", query);
-		PyObject *result = PyEval_CallObject (py_archinfo_cb, arglist);
+		PyObject *result = PyObject_CallObject (py_archinfo_cb, arglist);
 		if (result) {
 			return PyLong_AsLong (result); /* Python only returns long... */
 		}
