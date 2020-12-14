@@ -234,6 +234,9 @@ static int prompt(void *user) {
 		"r2 = r2pipe.open()\n"
 		"if have_ipy:\n"
 		"	IPython.embed()\n"
+		"else:\n"
+		"	import code\n"
+		"	code.InteractiveConsole(locals=globals()).interact()\n"
 	);
 }
 
