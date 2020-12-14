@@ -223,15 +223,17 @@ static bool setup(RLang *user);
 static int prompt(void *user) {
 	return !PyRun_SimpleString (
 		"r2 = None\n"
+		"have_ipy = False\n"
 		"try:\n"
-		"	import r2lang\n"
-		"	import r2pipe\n"
-		"	r2 = r2pipe.open()\n"
 		"	import IPython\n"
-		"	IPython.embed()\n"
+		"	have_ipy = True\n"
 		"except:\n"
 		"	pass\n"
-	// raise Exception(\"Cannot find IPython\")\n"
+		"import r2lang\n"
+		"import r2pipe\n"
+		"r2 = r2pipe.open()\n"
+		"if have_ipy:\n"
+		"	IPython.embed()\n"
 	);
 }
 
