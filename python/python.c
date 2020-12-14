@@ -230,7 +230,8 @@ static int prompt(void *user) {
 		"	import IPython\n"
 		"	IPython.embed()\n"
 		"except:\n"
-		"	raise Exception(\"Cannot find IPython\")\n"
+		"	pass\n"
+	// raise Exception(\"Cannot find IPython\")\n"
 	);
 }
 
