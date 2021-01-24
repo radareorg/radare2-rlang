@@ -20,7 +20,7 @@ def pyio(a):
 	def _check(path, many):
 		print("python-check %s"%(path))
 		return path[0:7] == "pyio://"
-	def _read(data, offset, size):
+	def _read(data, size):
 		print("python-read")
 		return "A" * size
 	def _seek(data, offset, whence):
@@ -32,7 +32,7 @@ def pyio(a):
 		if whence == 2: # END
 			return 512 
 		return 512
-	def _write(data, offset, buf, size):
+	def _write(data, buf, size):
 		print("python-write")
 		return True
 	def _system(data, cmd):

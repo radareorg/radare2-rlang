@@ -64,7 +64,7 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 	if (!py_io_read_cb) {
 		return -1;
 	}
-	PyObject *arglist = Py_BuildValue ("(OKi)", (PyObject *)fd->data, io->off, count);
+	PyObject *arglist = Py_BuildValue ("(Oi)", (PyObject *)fd->data, count);
 	PyObject *result = PyObject_CallObject (py_io_read_cb, arglist);
 	if (result) {
 		if (PyByteArray_Check (result)) {
