@@ -8,7 +8,6 @@
 #
 # The r2lang.plugin function exposes a way to register new plugins
 # into the RCore instance. This API is only available from RLang.
-# You must call with with '#!python test.py' or 'r2 -i test.py ..'
 
 import r2lang
 
@@ -17,14 +16,14 @@ FAKESIZE = 512
 def pyio(a):
 	def _open(path, rw, perm):
 		print("MyPyIO Opening %s"%(path))
-		return 1234 
+		return "pyio-data"
 	def _check(path, many):
 		print("python-check %s"%(path))
 		return path[0:7] == "pyio://"
-	def _read(offset, size):
+	def _read(data, offset, size):
 		print("python-read")
 		return "A" * size
-	def _seek(offset, whence):
+	def _seek(data, offset, whence):
 		print("python-seek")
 		if whence == 0: # SET
 			return offset
@@ -33,12 +32,16 @@ def pyio(a):
 		if whence == 2: # END
 			return 512 
 		return 512
-	def _write(offset, data, size):
+	def _write(data, offset, buf, size):
 		print("python-write")
 		return True
-	def _system(cmd):
+	def _system(data, cmd):
 		print("python-SYSTEM %s"%(cmd))
 		return True
+	def _close(data):
+		print(data)
+		print("python-close")
+		return 0
 	return {
 		"name": "pyio",
 		"license": "GPL",
@@ -49,6 +52,7 @@ def pyio(a):
 		"seek": _seek,
 		"write": _write,
 		"system": _system,
+		"close": _close,
 	}
 
 print("Registering Python IO plugin...")

@@ -10,30 +10,15 @@ static void *py_io_check_cb = NULL;
 static void *py_io_read_cb = NULL;
 static void *py_io_system_cb = NULL;
 static void *py_io_seek_cb = NULL;
+static void *py_io_close_cb = NULL;
 
 static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 	if (py_io_open_cb) {
-		int fd = -1;
 		PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
 		PyObject *result = PyObject_CallObject (py_io_open_cb, arglist);
-		if (result) {
-			if (PyLong_Check (result)) {
-				if (PyLong_AsLong (result) == -1) {
-					Py_DECREF (arglist);
-					Py_DECREF (result);
-					return NULL;
-				}
-				fd = (int)PyLong_AsLong (result);
-			}
-			if (PyBool_Check (result) && result == Py_False) {
-				Py_DECREF (arglist);
-				Py_DECREF (result);
-				return NULL;
-			}
-		}
 		Py_DECREF (arglist);
-		Py_DECREF (result);
-		return r_io_desc_new (io, py_io_plugin, path, rw, mode, NULL);
+		Py_INCREF (result);
+		return r_io_desc_new (io, py_io_plugin, path, rw, mode, result);
 	}
 	return NULL;
 }
@@ -54,7 +39,7 @@ static bool py_io_check(RIO *io, const char *path, bool many) {
 
 static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
 	if (py_io_seek_cb) {
-		PyObject *arglist = Py_BuildValue ("(Ki)", offset, whence);
+		PyObject *arglist = Py_BuildValue ("(NKi)", (PyObject *)fd->data, offset, whence);
 		PyObject *result = PyObject_CallObject (py_io_seek_cb, arglist);
 		if (result && PyLong_Check (result)) {
 			return io->off = PyLong_AsLong (result);
@@ -68,7 +53,7 @@ static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
 		switch (whence) {
 		case 0: return io->off = offset;
 		case 1: return io->off += offset;
-		case 2: return 512;
+		case 2: return 512;	//wtf is this
 		}
 		return -1;
 	}
@@ -79,7 +64,7 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 	if (!py_io_read_cb) {
 		return -1;
 	}
-	PyObject *arglist = Py_BuildValue ("(Ki)", io->off, count);
+	PyObject *arglist = Py_BuildValue ("(OKi)", (PyObject *)fd->data, io->off, count);
 	PyObject *result = PyObject_CallObject (py_io_read_cb, arglist);
 	if (result) {
 		if (PyByteArray_Check (result)) {
@@ -126,12 +111,10 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 	char * res = NULL;
 	if (py_io_system_cb) {
-		PyObject *arglist = Py_BuildValue ("(z)", cmd);
+		PyObject *arglist = Py_BuildValue ("(Oz)", (PyObject *)desc->data, cmd);
 		PyObject *result = PyObject_CallObject (py_io_system_cb, arglist);
 		if (result) {
-			if (
-			PyUnicode_Check (result)
-			) {
+			if (PyUnicode_Check (result)) {
 				res = PyBytes_AS_STRING (result);
 			} else if (PyBool_Check (result)) {
 				res = strdup (r_str_bool (result == Py_True));
@@ -146,6 +129,23 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 		Py_DECREF (result);
 	}
 	return res;
+}
+
+static int py_io_close(RIODesc *desc) {
+	int ret = 0;
+	if (py_io_close_cb) {
+		PyObject *arglist = Py_BuildValue ("(N)", (PyObject *)desc->data);
+		PyObject *result = PyObject_CallObject (py_io_close_cb, arglist);
+		if (PyLong_Check (result)) {
+			ret = PyLong_AsLong (result);
+		}
+		Py_DECREF (arglist);
+		Py_DECREF (result);
+		while (Py_REFCNT (desc->data)) {	//HACK
+			Py_DECREF (desc->data);
+		}
+	}
+	return ret;
 }
 
 void Radare_plugin_io_free(RIOPlugin *ap) {
@@ -172,35 +172,40 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	ptr = getF (o, "open");
 	if (ptr) {
 		Py_INCREF (ptr);
-		py_io_open_cb = (void*)ptr;
+		py_io_open_cb = (void *)ptr;
 		ap->open = py_io_open;
 	}
 	ptr = getF (o, "check");
 	if (ptr) {
 		Py_INCREF (ptr);
-		py_io_check_cb = (void*)ptr;
+		py_io_check_cb = (void *)ptr;
 		ap->check = py_io_check;
 	}
 	ptr = getF (o, "read");
 	if (ptr) {
 		Py_INCREF (ptr);
-		py_io_read_cb = (void*)ptr;
+		py_io_read_cb = (void *)ptr;
 		ap->read = py_io_read;
 	}
 	ptr = getF (o, "system");
 	if (ptr) {
 		Py_INCREF (ptr);
-		py_io_system_cb = (void*)ptr;
+		py_io_system_cb = (void *)ptr;
 		ap->system = py_io_system;
 	}
 	ptr = getF (o, "seek");
 	if (ptr) {
 		Py_INCREF (ptr);
-		py_io_seek_cb = (void*)ptr;
+		py_io_seek_cb = (void *)ptr;
 		ap->lseek = py_io_seek;
 	}
-#if 0
 	ptr = getF (o, "close");
+	if (ptr) {
+		Py_INCREF (ptr);
+		py_io_close_cb = (void *)ptr;
+		ap->close = py_io_close;
+	}
+#if 0
 	ptr = getF (o, "write");
 	ptr = getF (o, "resize");
 #endif
