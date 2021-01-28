@@ -121,10 +121,11 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 			} else if (PyLong_Check (result)) {
 				long n = PyLong_AsLong (result);
 				res = r_str_newf ("%ld", n);
+			} else {
+				eprintf ("Unknown type returned. Boolean was expected.\n");
 			}
 		}
 		// PyObject_Print(result, stderr, 0);
-		eprintf ("Unknown type returned. Boolean was expected.\n");
 		Py_DECREF (arglist);
 		Py_DECREF (result);
 	}
