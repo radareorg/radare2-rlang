@@ -1,4 +1,4 @@
-/* radare2 - LGPL - Copyright 2009-2019 - pancake */
+/* radare2 - LGPL - Copyright 2009-2021 - pancake */
 /* python extension for radare2's r_lang */
 
 #include "python/common.h"
@@ -23,7 +23,7 @@ R2Plugins plugins[] = {
 	{ NULL }
 };
 
-static int run(RLang *lang, const char *code, int len) {
+static bool run(RLang *lang, const char *code, int len) {
 	core = (RCore *)lang->user;
 	PyRun_SimpleString (code);
 	return true;
@@ -39,7 +39,7 @@ static int slurp_python(const char *file) {
 	return false;
 }
 
-static int run_file(struct r_lang_t *lang, const char *file) {
+static bool run_file(struct r_lang_t *lang, const char *file) {
 	return slurp_python (file);
 }
 
@@ -217,7 +217,7 @@ static PyObject *init_radare_module(void) {
 
 /* -init- */
 
-static int init(RLang *user);
+static bool init(RLang *user);
 static bool setup(RLang *user);
 
 static int prompt(void *user) {
@@ -270,21 +270,21 @@ static bool setup(RLang *lang) {
 	return true;
 }
 
-static int init(RLang *lang) {
+static bool init(RLang *lang) {
 	if (lang) {
 		core = lang->user;
 	}
 	// DO NOT INITIALIZE MODULE IF ALREADY INITIALIZED
 	if (Py_IsInitialized ()) {
-		return 0;
+		return false;
 	}
 	PyImport_AppendInittab ("r2lang", init_radare_module);
 	PyImport_AppendInittab ("binfile", init_pybinfile_module);
 	Py_Initialize ();
 	// Add a current directory to the PYTHONPATH
-	PyObject *sys = PyImport_ImportModule("sys");
-	PyObject *path = PyObject_GetAttrString(sys, "path");
-	PyList_Append(path, PyUnicode_FromString("."));
+	PyObject *sys = PyImport_ImportModule ("sys");
+	PyObject *path = PyObject_GetAttrString (sys, "path");
+	PyList_Append (path, PyUnicode_FromString("."));
 	return true;
 }
 
