@@ -1,10 +1,11 @@
 PKGNAME radare2-rlang
-VERSION 4.6.0-git
+VERSION 5.2.0-git
 CONTACT pancake ; pancake@nopcode.org
 
 REPORT PREFIX ;
 
 LANG_C!
+USE_PKGCONFIG!
 
 (( mandatory ))
 PKGCFG! R2_CFLAGS R2_LDFLAGS r_core
