@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2019-2020 pancake */
+/* radare - LGPL - Copyright 2019-2021 pancake */
 
 #include "r_lib.h"
 #include "r_core.h"
@@ -6,7 +6,7 @@
 
 static const char *r2v_sym = "r2v__entry";
 
-static int lang_v_file(RLang *lang, const char *file);
+static bool lang_v_file(RLang *lang, const char *file);
 
 static const char *r2v_head = \
 	"module r2v\n"
@@ -19,7 +19,7 @@ static const char *r2v_body = \
 	"#include <r_core.h>\n"
 	"\n"
 	"struct R2 {}\n"
-	"fn C.r_core_cmd_str (core &R2, s string) byteptr\n"
+	"fn C.r_core_cmd_str (core &R2, s byteptr) byteptr\n"
 	"fn C.r_core_free (core &R2)\n"
 	"fn C.r_core_new () &R2\n"
 	"\n"
@@ -27,7 +27,7 @@ static const char *r2v_body = \
 	"  unsafe {\n"
 	"    o := C.r_core_cmd_str (core, s.str)\n"
 	"    strs := o.vstring()\n"
-	"    free(o)\n"
+	"    // free(o)\n"
 	"    return strs\n"
 	"  }\n"
 	"}\n"
@@ -83,22 +83,50 @@ static VParse vcode_parse(const char *code) {
 			p = cp + 1;
 		}
 	}
-	//r_strbuf_appendf (vp.body, "%s\n", p);
+	if (*p) {
+		r_strbuf_appendf (vp.body, "%s\n", p);
+	}
 	free (c);
 	return vp;
 }
 
-static int __run(RLang *lang, const char *code, int len) {
+static void runlib(void *user, const char *lib) {
+	void *vl = r_lib_dl_open (lib);
+	if (vl) {
+		void (*fcn)(RCore *, int argc, const char **argv);
+		fcn = r_lib_dl_sym (vl, r2v_sym);
+		if (fcn) {
+			fcn (user, 0, NULL);
+		} else {
+			eprintf ("Cannot find '%s' symbol in library\n", r2v_sym);
+		}
+		r_lib_dl_close (vl);
+	} else {
+		eprintf ("Cannot open '%s' library\n", lib);
+	}
+}
+
+static bool __run(RLang *lang, const char *code, int len) {
+	r_file_rm (".tmp.v");
 	FILE *fd = r_sandbox_fopen (".tmp.v", "w");
 	if (fd) {
 		VParse vcode = vcode_parse (code);
 		fputs (r2v_head, fd);
 		fputs (r_strbuf_get (vcode.head), fd);
 		fputs (r2v_body, fd);
-		fputs (r_strbuf_get (vcode.body), fd);
+		const char *body = r_strbuf_get (vcode.body);
+		if (!strstr (body, "fn entry")) {
+			fputs ("pub fn entry(r2 &R2) {\n", fd);
+		}
+		fputs (body, fd);
+		if (!strstr (body, "fn entry")) {
+			fputs ("}\n", fd);
+		}
 		fclose (fd);
 		lang_v_file (lang, ".tmp.v");
-		r_file_rm (".tmp.v");
+		r_sandbox_system ("v -shared -o .tmp.v."R_LIB_EXT" .tmp.v", 1);
+	//	runlib (lang->user, ".tmp.v."R_LIB_EXT);
+		//r_file_rm (".tmp.v");
 		vcode_fini (&vcode);
 		return true;
 	}
@@ -106,13 +134,16 @@ static int __run(RLang *lang, const char *code, int len) {
 	return false;
 }
 
-static int lang_v_file(RLang *lang, const char *file) {
+static bool lang_v_file(RLang *lang, const char *file) {
+	if (!lang || R_STR_ISEMPTY (file)) {
+		return false;
+	}
 	if (!r_str_endswith (file, ".v")) {
 		return false;
 	}
 	if (strcmp (file, ".tmp.v")) {
 		char *code = r_file_slurp (file, NULL);
-		int r = __run (lang, code, -1);
+		bool r = __run (lang, code, -1);
 		free (code);
 		return r;
 	}
@@ -141,25 +172,13 @@ static int lang_v_file(RLang *lang, const char *file) {
 		return false;
 	}
 	free (buf);
-	void *vl = r_lib_dl_open (lib);
-	if (vl) {
-		void (*fcn)(RCore *, int argc, const char **argv);
-		fcn = r_lib_dl_sym (vl, r2v_sym);
-		if (fcn) {
-			fcn (lang->user, 0, NULL);
-		} else {
-			eprintf ("Cannot find '%s' symbol in library\n", r2v_sym);
-		}
-		r_lib_dl_close (vl);
-	} else {
-		eprintf ("Cannot open '%s' library\n", lib);
-	}
+	runlib (lang->user, lib);
 	r_file_rm (lib);
 	free (lib);
 	return 0;
 }
 
-static int lang_v_run(RLang *lang, const char *code, int len) {
+static bool lang_v_run(RLang *lang, const char *code, int len) {
 	return __run (lang, code, len);
 }
 
