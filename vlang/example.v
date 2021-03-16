@@ -2,11 +2,33 @@ import json
 import x.json2
 
 fn (r2 &R2)once(k string) bool {
-	if r2.cmd('fd aaa.$k') != '' {
+	if r2.cmd('fd once.$k') != '' {
 		return true
 	}
-	r2.cmd('f aaa.$k=-123')
+	r2.cmd('f once.$k=-123')
 	return false
+}
+
+fn (r2 &R2)main() ? {
+	arg := file_type(r2)
+	println('File: ' + arg)
+	arq := file_typ(r2)
+	println('File2: '+arq)
+	println(r2.cmd('?E hello'))
+	r2.cmd('aaa')
+	addrs := r2.function_addrs()?
+	for at in addrs {
+		fcn := r2.function_info(at)?
+		println('--- ${fcn.name}')
+	}
+
+	fcns := r2.functions()?
+	for fcn in fcns {
+		fcnmap := fcn.as_map()
+		name := fcnmap['name']
+		addr := fcnmap['offset']
+		println('$addr  $name')
+	}
 }
 
 pub fn entry(r2 &R2) {
@@ -14,26 +36,8 @@ pub fn entry(r2 &R2) {
 		eprintln('dont run this script twice')
 		return
 	}
-	arg := file_type(r2)
-	println('File: ' + arg)
-	arq := file_typ(r2)
-	println('File2: '+arq)
-	println(r2.cmd('?E hello'))
-	r2.cmd('aaa')
-	addrs := r2.function_addrs() or { panic(err) }
-	for at in addrs {
-		fcn := r2.function_info(at) or {panic(err)}
-		println('--- ${fcn.name}')
-	}
-
-	fcns := r2.functions() or {
-		return
-	}
-	for fcn in fcns {
-		fcnmap := fcn.as_map()
-		name := fcnmap['name']
-		addr := fcnmap['offset']
-		println('$addr  $name')
+	r2.main() or {
+		panic(err)
 	}
 }
 
