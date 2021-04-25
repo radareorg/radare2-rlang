@@ -17,7 +17,7 @@ static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 		PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
 		PyObject *result = PyObject_CallObject (py_io_open_cb, arglist);
 		if (!result) {		//exception was thrown
-			break;
+			return NULL;
 		}
 		Py_DECREF (arglist);
 		Py_INCREF (result);
