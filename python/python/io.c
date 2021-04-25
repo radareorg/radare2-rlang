@@ -33,9 +33,9 @@ static bool py_io_check(RIO *io, const char *path, bool many) {
 		PyObject *result = PyObject_CallObject (py_io_check_cb, arglist);
 		if (result && PyBool_Check (result)) {
 			res = result == Py_True;
+			Py_DECREF (result);
 		}
 		Py_DECREF (arglist);
-		Py_DECREF (result);
 	}
 	return res; 
 }
