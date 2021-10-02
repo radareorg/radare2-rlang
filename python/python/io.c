@@ -201,7 +201,7 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	if (ptr) {
 		Py_INCREF (ptr);
 		py_io_seek_cb = (void *)ptr;
-		ap->lseek = py_io_seek;
+		ap->seek = py_io_seek;
 	}
 	ptr = getF (o, "close");
 	if (ptr) {
