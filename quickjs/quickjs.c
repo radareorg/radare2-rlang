@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2020 pancake */
+/* radare - LGPL - Copyright 2020-2021 pancake */
 
 #define _XOPEN_SOURCE 
 #include <stdio.h>
@@ -7,38 +7,21 @@
 #include <time.h>
 #include <r_lib.h>
 #include <r_core.h>
+#include <r_config.h>
 #include <r_lang.h>
 
-#include "./quickjs/quickjs.h"
-
 static RCore *Gcore = NULL;
-static JSContext *ctx = NULL;
-static JSRuntime *rt = NULL;
 static bool is_init = false;
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
-static JSValue r2log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-	size_t plen;
-	const char *n = JS_ToCStringLen2(ctx, &plen, argv[0], false);
-	eprintf ("%s\n", n);
-	return JS_NewBool (ctx, true);
-}
+#if QJS_FRIDA
+#include "quickjs-frida/quickjs.h"
+#else
+#include "quickjs-bellard/quickjs.h"
+#endif
 
-static JSValue r2cmd(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-	size_t plen;
-	const char *n = JS_ToCStringLen2(ctx, &plen, argv[0], false);
-	char *ret = r_core_cmd_str (Gcore, n);
-	return JS_NewString (ctx, ret);
-}
-
-static const JSCFunctionListEntry js_r2_funcs[] = {
-	JS_CFUNC_DEF("cmd", 1, r2cmd),
-	JS_CFUNC_DEF("log", 1, r2log),
-};
-
-static int js_r2_init(JSContext *ctx, JSModuleDef *m) {
-	return JS_SetModuleExportList(ctx, m, js_r2_funcs, countof (js_r2_funcs));
-}
+static JSContext *ctx = NULL;
+static JSRuntime *rt = NULL;
 
 static void js_dump_obj(JSContext *ctx, FILE *f, JSValueConst val)
 {
@@ -52,6 +35,15 @@ static void js_dump_obj(JSContext *ctx, FILE *f, JSValueConst val)
         fprintf(f, "[exception]\n");
     }
 }
+
+#if QJS_LIBC
+#if QJS_FRIDA
+#include "quickjs-frida/quickjs-libc.h"
+#else
+#include "quickjs-bellard/quickjs-libc.h"
+#endif
+#else
+
 
 static void js_std_dump_error1(JSContext *ctx, JSValueConst exception_val)
 {
@@ -77,6 +69,31 @@ void js_std_dump_error(JSContext *ctx)
     JS_FreeValue(ctx, exception_val);
 }
 
+#endif
+
+static JSValue r2log(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	size_t plen;
+	const char *n = JS_ToCStringLen2(ctx, &plen, argv[0], false);
+	eprintf ("%s\n", n);
+	return JS_NewBool (ctx, true);
+}
+
+static JSValue r2cmd(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	size_t plen;
+	const char *n = JS_ToCStringLen2(ctx, &plen, argv[0], false);
+	char *ret = r_core_cmd_str (Gcore, n);
+	return JS_NewString (ctx, ret);
+}
+
+static const JSCFunctionListEntry js_r2_funcs[] = {
+	JS_CFUNC_DEF("cmd", 1, r2cmd),
+	JS_CFUNC_DEF("log", 1, r2log),
+};
+
+static int js_r2_init(JSContext *ctx, JSModuleDef *m) {
+	return JS_SetModuleExportList(ctx, m, js_r2_funcs, countof (js_r2_funcs));
+}
+
 static void register_helpers(RLang *lang) {
 	// TODO: move this code to init/fini
 	if (ctx != NULL || is_init) {
@@ -92,6 +109,12 @@ static void register_helpers(RLang *lang) {
 	}
 	js_r2_init (ctx, m);
 	JS_AddModuleExportList(ctx, m, js_r2_funcs, countof(js_r2_funcs));
+#if QJS_LIBC
+	if (r_config_get (Gcore->config, "cfg.sandbox") == 0) {
+		js_init_module_std(ctx, "std");
+		js_init_module_os(ctx, "os");
+	}
+#endif
 #if 0
 	eval(ctx, "function dir(x){"
 		"console.log(JSON.stringify(x).replace(/,/g,',\\n '));"
@@ -109,17 +132,18 @@ static void eval_jobs(JSContext *ctx) {
 	} while (pctx);
 }
 
-static int eval(JSContext *ctx, const char *code) {
+static bool eval(JSContext *ctx, const char *code) {
 	JSValue v = JS_Eval (ctx, code, strlen (code), "-", 0);
 	if (JS_IsException(v)) {
 		js_std_dump_error (ctx);
 		JSValue e = JS_GetException (ctx);
+		js_dump_obj(ctx, stderr, e);
 	}
 	eval_jobs (ctx);
-	return 0;
+	return true;
 }
 
-static int lang_quickjs_run(RLang *lang, const char *code, int len) {
+static bool lang_quickjs_run(RLang *lang, const char *code, int len) {
 	register_helpers (lang);
 	return eval (ctx, code);
 }
