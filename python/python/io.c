@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2009-2020 - pancake */
+/* radare - LGPL - Copyright 2009-2021 - pancake */
 
 #include "io.h"
 #include "core.h"
@@ -135,7 +135,7 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 	return res;
 }
 
-static int py_io_close(RIODesc *desc) {
+static bool py_io_close(RIODesc *desc) {
 	int ret = 0;
 	if (py_io_close_cb) {
 		PyObject *arglist = Py_BuildValue ("(N)", (PyObject *)desc->data);
@@ -149,7 +149,7 @@ static int py_io_close(RIODesc *desc) {
 			Py_DECREF (desc->data);
 		}
 	}
-	return ret;
+	return ret != 0;
 }
 
 void Radare_plugin_io_free(RIOPlugin *ap) {

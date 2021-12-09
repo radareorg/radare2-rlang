@@ -325,12 +325,10 @@ static bool py_load_buffer(RBinFile *arch, void **bin_obj, RBuffer *buf, ut64 lo
 	return false;
 }
 
-static bool py_check_buffer(RBuffer *buf)
-{
+static bool py_check_buffer(RBinFile *bf, RBuffer *buf) {
 	int rres = 0;
 	ut64 length = 0;
 	const ut8 *buf_data = r_buf_data (buf, &length);
-
 
 	if (!buf_data || length == 0) {
 		eprintf("Empty buffer!\n");
