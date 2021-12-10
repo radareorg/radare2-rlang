@@ -8,29 +8,45 @@
 # You must call with with '#!python test.py' or 'r2 -i test.py ..'
 
 import r2lang
+from r2lang import R
 
-def pyasm(a):
-	def assemble(s):
-		print("Assembling %s"%(s))
-		return [ 1, 2, 3, 4 ]
+def pyanal(a):
+	def set_reg_profile():
+		return "=PC	pc\n" + \
+		"=SP	sp\n" + \
+		"gpr	r0	.32	0	0\n" + \
+		"gpr	r1	.32	4	0\n" + \
+		"gpr	r2	.32	8	0\n" + \
+		"gpr	r3	.32	12	0\n" + \
+		"gpr	r4	.32	16	0\n" + \
+		"gpr	r5	.32	20	0\n" + \
+		"gpr	sp	.32	24	0\n" + \
+		"gpr	pc	.32	28	0\n"
 
-	def disassemble(buf, buflen, pc):
-		try:
-			return [ 2, f"opcode {buf[0]}" ]
-		except:
-			print("err")
-			print(sys.exc_info())
-			return [ 2, "opcode" ]
+	def analop(buf, pc):
+		op = {
+			"type" : R.R_ANAL_OP_TYPE_NULL,
+			"cycles" : 0,
+			"stackop" : 0,
+			"stackptr" : 0,
+			"ptr" : -1,
+			"jump" : -1,
+			"addr" : 0,
+			"eob" : False,
+			"esil" : "",
+		}
+		return [ 2, op ]
+
 	return {
-		"name": "MyPyDisasm",
+		"name": "MyPyAnal",
 		"arch": "pyarch",
 		"bits": 32,
 		"license": "GPL",
-		"desc": "disassembler plugin in python",
-		"assemble": assemble,
-		"disassemble": disassemble,
+		"desc": "anal plugin in python",
+		"set_reg_profile": set_reg_profile,
+		"op": analop,
 	}
 
-if not r2lang.plugin("asm", pyasm):
-	print("Failed to register the python asm plugin.")
+if not r2lang.plugin("anal", pyanal):
+	print("Failed to register the python anal plugin.")
 	
