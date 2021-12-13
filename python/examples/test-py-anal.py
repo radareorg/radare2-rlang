@@ -23,6 +23,19 @@ def pyanal(a):
 		"gpr	sp	.32	24	0\n" + \
 		"gpr	pc	.32	28	0\n"
 
+	def archinfo(query):
+		if query == R.R_ANAL_ARCHINFO_MIN_OP_SIZE:
+			return 2
+		if query == R.R_ANAL_ARCHINFO_MAX_OP_SIZE:
+			return 2
+		if query == R.R_ANAL_ARCHINFO_INV_OP_SIZE:  # invalid op size
+			return 2
+		if query == R.R_ANAL_ARCHINFO_ALIGN:
+			return 2
+		if query == R.R_ANAL_ARCHINFO_DATA_ALIGN:
+			return 2
+		return 0
+
 	def analop(buf, pc):
 		op = {
 			"type" : R.R_ANAL_OP_TYPE_NULL,
@@ -44,6 +57,7 @@ def pyanal(a):
 		"license": "GPL",
 		"desc": "anal plugin in python",
 		"set_reg_profile": set_reg_profile,
+		"archinfo": archinfo,
 		"op": analop,
 	}
 
