@@ -1,7 +1,7 @@
 #QJS_BRANCH=bellard
 QJS_BRANCH=frida
 
-QJS_LIBC=1
+QJS_LIBC=0
 
 ifeq ($(QJS_BRANCH),frida)
 	QJS_NAME=quickjs-frida
@@ -21,7 +21,8 @@ QJS_LIBS+=-lr_core -lr_config
 
 lang_quickjs.${EXT_SO}: $(QJS_NAME)
 	$(MAKE) -C $(QJS_NAME) libquickjs.a
-	-$(CC) -std=c99 $(DUK_CFLAGS) -I quickjs $(QJS_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
+	-$(CC) -flto -Wl,-exported_symbols_list,symbols.lst \
+		-Oz -Wl,-dead_strip -std=c99 $(DUK_CFLAGS) -I quickjs $(QJS_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
 		-o lang_quickjs.$(EXT_SO) quickjs.c $(QJS_NAME)/libquickjs.a $(QJS_LIBS)
 
 $(QJS_NAME):

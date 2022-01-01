@@ -37,12 +37,16 @@ static void js_dump_obj(JSContext *ctx, FILE *f, JSValueConst val)
 }
 
 #if QJS_LIBC
+
 #if QJS_FRIDA
 #include "quickjs-frida/quickjs-libc.h"
 #else
 #include "quickjs-bellard/quickjs-libc.h"
 #endif
+
 #else
+
+#include "quickjs-frida/quickjs.h"
 
 
 static void js_std_dump_error1(JSContext *ctx, JSValueConst exception_val)
