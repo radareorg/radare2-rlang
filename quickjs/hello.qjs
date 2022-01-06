@@ -1,9 +1,10 @@
-import("r2")
- .then((r2) => {
-   var a = 1 + 2;
-   r2.log("hello world " + a);
- })
- .catch((err) => {
-   throw err;
- });
+// import * as std from "std";
+// r2.log("hello world");
+// puts("Hello")
 
+async function main() {
+	const r2 = await import("r2");
+	r2.log(r2.cmd("?E Clippy"))
+}
+
+main()
