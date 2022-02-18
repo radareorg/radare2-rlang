@@ -1,4 +1,4 @@
-/* radare2 - LGPL - Copyright 2009-2021 - pancake */
+/* radare2 - LGPL - Copyright 2009-2022 - pancake */
 /* python extension for radare2's r_lang */
 
 #include "python/common.h"
@@ -46,8 +46,14 @@ static bool run_file(struct r_lang_t *lang, const char *file) {
 static char *py_nullstr = "";
 
 static void Radare_dealloc(Radare* self) {
-	Py_XDECREF (self->first);
-	Py_XDECREF (self->last);
+	if (self) {
+		if (self->first) {
+			Py_XDECREF (self->first);
+		}
+		if (self->last) {
+			Py_XDECREF (self->last);
+		}
+	}
 	//self->ob_type->tp_free((PyObject*)self);
 }
 
