@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2017-2019 - pancake, xvilka */
+/* radare - LGPL - Copyright 2017-2022 - pancake, xvilka */
 
 // Exporting the R_ANAL_* enum constants
 #include <r_reg.h>
@@ -192,6 +192,7 @@ static int py_anal(RAnal *a, RAnalOp *op, ut64 addr, const ut8 *buf, int len, RA
 				op->stackptr = getI (dict, "stackptr");
 				op->ptr = getI (dict, "ptr");
 				op->eob = getB (dict, "eob");
+#if 0
 				// Loading 'src' and 'dst' values
 				// SRC is is a list of 3 elements
 				PyObject *tmpsrc = getO (dict, "src");
@@ -205,6 +206,7 @@ static int py_anal(RAnal *a, RAnalOp *op, ut64 addr, const ut8 *buf, int len, RA
 				PyObject *tmpdst = getO (dict, "dst");
 				// Read value and underlying regs
 				READ_VAL (tmpdst, op->dst, tmpreg)
+#endif
 				// Loading 'var' value if presented
 				r_strbuf_set (&op->esil, getS (dict, "esil"));
 				op->mnemonic = r_str_new (getS (dict, "mnemonic"));
