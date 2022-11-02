@@ -1,0 +1,13 @@
+diff --git a/zig-wasm3/submod_build_plugin.zig b/zig-wasm3/submod_build_plugin.zig
+index 8acdb6f..7e3e7a3 100644
+--- a/zig-wasm3/submod_build_plugin.zig
++++ b/zig-wasm3/submod_build_plugin.zig
+@@ -79,7 +79,7 @@ pub fn compile(b: *std.build.Builder, mode: std.builtin.Mode, target: std.zig.Cr
+ 
+     }
+ 
+-    lib.addIncludeDir(src_dir);
++    lib.addIncludePath(src_dir);
+ 
+     lib.addCSourceFile(std.fs.path.join(b.allocator, &[_][]const u8{
+         std.fs.path.dirname(@src().file).?,
