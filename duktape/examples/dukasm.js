@@ -3,6 +3,7 @@
  * This script depends on "duktape"
  * $ r2 -nqc '. dukasm.js' -
  */
+// xxx this plugin is not going to work in r2>=5.8 because asm plugins cant disasm
 
 var res = r2plugin ("asm", function (a) {
 	function disassemble (buf) {
