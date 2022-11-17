@@ -10,8 +10,6 @@
 #include <r_config.h>
 #include <r_lang.h>
 
-static RCore *Gcore = NULL;
-static bool is_init = false;
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 #if QJS_FRIDA
@@ -20,8 +18,11 @@ static bool is_init = false;
 #include "quickjs-bellard/quickjs.h"
 #endif
 
-static JSContext *ctx = NULL;
-static JSRuntime *rt = NULL;
+// TODO: remove all those globals
+static R_TH_LOCAL JSContext *ctx = NULL;
+static R_TH_LOCAL JSRuntime *rt = NULL;
+static R_TH_LOCAL RCore *Gcore = NULL;
+static R_TH_LOCAL bool is_init = false;
 
 static void js_dump_obj(JSContext *ctx, FILE *f, JSValueConst val) {
 	const char *str = JS_ToCString(ctx, val);
@@ -79,6 +80,13 @@ static JSValue r2log(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
 	return JS_NewBool (ctx, true);
 }
 
+static JSValue r2error(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	size_t plen;
+	const char *n = JS_ToCStringLen2 (ctx, &plen, argv[0], false);
+	eprintf ("%s\n", n);
+	return JS_NewBool (ctx, true);
+}
+
 static JSValue r2cmd(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
 	size_t plen;
 	const char *n = JS_ToCStringLen2(ctx, &plen, argv[0], false);
@@ -89,6 +97,7 @@ static JSValue r2cmd(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
 static const JSCFunctionListEntry js_r2_funcs[] = {
 	JS_CFUNC_DEF ("cmd", 1, r2cmd),
 	JS_CFUNC_DEF ("log", 1, r2log),
+	JS_CFUNC_DEF ("error", 1, r2error),
 };
 
 static int js_r2_init(JSContext *ctx, JSModuleDef *m) {
@@ -97,6 +106,7 @@ static int js_r2_init(JSContext *ctx, JSModuleDef *m) {
 
 static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 	JSContext *ctx = JS_NewContext (rt);
+	// JSContext *ctx = JS_NewContextRaw (rt);
 	if (!ctx)
 		return NULL;
 #ifdef CONFIG_BIGNUM
@@ -108,9 +118,10 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 	}
 #endif
 #if QJS_LIBC
+     js_std_init_handlers(rt);
 	/* system modules */
-	js_init_module_std(ctx, "std");
 	js_init_module_os(ctx, "os");
+	js_init_module_std(ctx, "std");
 #if 0
 	// if load_std
 	const char *str = "import * as std from 'std';\n"
@@ -126,7 +137,7 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 static void register_helpers(RLang *lang) {
 	// TODO: move this code to init/fini
 	if (ctx || is_init) {
-		return;
+	//	return;
 	}
 	is_init = true;
 	Gcore = lang->user;
@@ -175,6 +186,7 @@ static bool eval(JSContext *ctx, const char *code) {
 }
 
 static bool lang_quickjs_run(RLang *lang, const char *code, int len) {
+	eprintf ("(RUN\n");
 	register_helpers (lang);
 	return eval (ctx, code);
 }
@@ -182,6 +194,7 @@ static bool lang_quickjs_run(RLang *lang, const char *code, int len) {
 static int lang_quickjs_file(RLang *lang, const char *file) {
 	int rc = -1;
 	register_helpers (lang);
+	eprintf ("(FILE\n");
 	char *code = r_file_slurp (file, NULL); 
 	if (code) {
 		rc = eval (ctx, code);

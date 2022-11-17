@@ -11,6 +11,10 @@ function entry(r2) {
 		r2.cmdj = function(x) {
 			return JSON.parse(r2.cmd(x));
 		}
+		const main = Module.getMain();
+		if (main) {
+			main ("");
+		}
 		Module["index"].main(r2); 
 	} catch (e) {
 		r2.log("Error: " + e.message);
