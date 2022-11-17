@@ -81,6 +81,7 @@ static int duk_assemble(RAsm *a, RAsmOp *op, const char *str) {
 	return res;
 }
 
+#if 0
 static int duk_disasm(RAsm *a, RAsmOp *op, const ut8 *buf, int len) {
 	int res = 0, res2 = 0;
 	const char *opstr = NULL;
@@ -128,6 +129,7 @@ static int duk_disasm(RAsm *a, RAsmOp *op, const ut8 *buf, int len) {
 	}
 	return res2;
 }
+#endif
 
 static int r2plugin(duk_context *ctx) {
 	RLibStruct *lib_struct;
@@ -194,7 +196,7 @@ static int r2plugin(duk_context *ctx) {
 	duk_push_global_stash(ctx);
 	duk_get_prop_string (ctx, 1, "disassemble");
 	duk_put_prop_string(ctx, -2, "disfun"); // TODO: prefix plugin name somehow
-	ap->disassemble = duk_disasm;
+	// ap->disassemble = duk_disasm;
 
 	duk_push_global_stash(ctx);
 	duk_get_prop_string (ctx, 1, "assemble");
@@ -333,7 +335,7 @@ static void register_helpers(RLang *lang) {
 		"for(var i in x) {console.log(i);}}");
 }
 
-static int lang_duktape_run(RLang *lang, const char *code, int len) {
+static bool lang_duktape_run(RLang *lang, const char *code, int len) {
 	register_helpers (lang);
 	return lang_duktape_safe_eval (ctx, code);
 }

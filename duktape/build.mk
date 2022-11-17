@@ -1,4 +1,4 @@
-DUKTAPE_VER=2.4.0
+DUKTAPE_VER=2.7.0
 DUKTAPE_FILE=duktape-$(DUKTAPE_VER).tar.xz
 DUKTAPE_URL=https://duktape.org/$(DUKTAPE_FILE)
 DV=duktape-${DUKTAPE_VER}
@@ -8,7 +8,7 @@ duktape:
 	$(MAKE) lang_duktape.$(EXT_SO)
 
 lang_duktape.$(EXT_SO): duktape.o duk
-	-$(CC) -std=c99 $(DUK_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
+	-$(CC) -std=c99 -flto -Os $(DUK_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
 		-o lang_duktape.$(EXT_SO) duktape.c
 
 p:
