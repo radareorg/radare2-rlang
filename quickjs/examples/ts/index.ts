@@ -3,19 +3,18 @@ import { R2Pipe, R2Api, NativePointer } from "./r2pipe";
 
 // main
 
-function main(r2: R2Pipe) {
+function firstString(api: R2Api) : NativePointer {
+	return api.ptr(api.r2.cmd("f,name/str/str.,addr/cols/name,name/head/1,:quiet"))
+	// return api.ptr(api.r2.cmd("f~str.[:0]").split(' ')[0])
+}
+
+export function main(r2: R2Pipe) {
 	var api = new R2Api(r2);
-	const p = api.ptr("0x80000");
-	const bytes = p.readByteArray(32);
+	const p = api.ptr("entry0");
+	const bytes = api.ptr("entry0").readByteArray(32);
 	p.add(4);
-	r2.log(JSON.stringify(bytes));
+	r2.log("bytes: " + JSON.stringify(bytes));
 
-	const $ptr = api.ptr;
-	const $ = r2.cmd;
-
-	const text = $ptr("entry0").readCString();
-	r2.log(`Hello World ${text}`)
-	r2.log(text);
-	r2.log(JSON.stringify(Object.keys(r2)));
-	r2.log("done");
+	const text = firstString(api).readCString();
+	r2.log(`First string found is:\n\t- ${text}`)
 }

@@ -13,11 +13,13 @@ export class R2Api {
 	}
 
 	ptr(s: string): NativePointer {
-		this.r2.log("new ptr");
 		return new NativePointer(this, s);
 	}
 	cmd(s: string): string {
 		return this.r2.cmd(s);
+	}
+	cmdj(s: string): string {
+		return JSON.stringify(this.cmd(s));
 	}
 }
 
@@ -26,7 +28,6 @@ export class NativePointer {
 	api: R2Api;
 	constructor(api: R2Api, s: string) {
 		this.api = api;
-		api.cmd("?e x");
 		this.addr = s;
 	}
 	readByteArray(len: number) {
