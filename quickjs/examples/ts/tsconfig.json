@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+	          "module": "AMD",
+    "target": "es6",
+    "type": "module",
+	         "rootDir": "./",
+        "outFile": "./out.js"
+  }
+}

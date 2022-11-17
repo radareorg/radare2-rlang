@@ -1,0 +1,34 @@
+
+
+// boilerplate for quickjs
+import('r2').then(entry).catch((e)=>{throw(e);});
+
+function entry(r2) {
+    try {
+	    // TODO: take args somehow
+	    main(r2);
+    } catch (e) {
+	r2.log("Error: " + e.message);
+    }
+}
+
+function main(r2) {
+    const $ = r2.cmd;
+    const print = r2.log;
+    function findus() {
+	print(JSON.stringify(Object.keys(r2)));
+    }
+    findus();
+    // real code starts here
+    const msg = $('?E Hello World');
+    print(msg);
+    r2.cmd('aa > /dev/null');
+    // r2.log('hello world ' + a);
+    const b = JSON.parse(r2.cmd('aflj'));
+    print(`Found ${b.length} xrefs`);
+
+    for (var i = 0; i < b.length; i++) {
+	    // r2.log("jeje " + b[i].name);
+    }
+    // r2.log(JSON.stringify(JSON.parse(b)));
+}

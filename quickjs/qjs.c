@@ -191,7 +191,7 @@ static int lang_quickjs_file(RLang *lang, const char *file) {
 }
 
 static RLangPlugin r_lang_plugin_quickjs = {
-	.name = "quickjs",
+	.name = "qjs",
 	.ext = "qjs",
 	.desc = "JavaScript extension language using QuicKJS",
 	.run = lang_quickjs_run,
