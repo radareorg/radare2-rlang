@@ -1,0 +1,41 @@
+global := 213
+
+struct ptr {
+	num: int
+	text: str
+}
+func get_pointer() : ptr {
+	return new ptr {0, ""}
+}
+
+func find_entrypoint() : str {
+	return trim(r2("ieq"))
+}
+
+// parse file, expose new functions and globals and check
+// if all of them start with the filename as prefix
+// include("test.tiny")
+
+func countmovs(addr: str) : int {
+	return atoi(r2("af;pdr~mov?"))
+}
+
+func getbbs(addr: str) : array {
+	return array() // split(r2(format("afbq@%s", addr)), "\n")
+}
+
+func main() {
+	printf("Hello radare2!\n")
+	r2("o /bin/ls")
+	ep := find_entrypoint()
+	printf ("entry0 = %s\n", ep)
+	n := countmovs(ep)
+	printf ("movs = %i\n", n)
+	bbs := getbbs(ep)
+	for i := 0; i < n; i += 1 {
+		printf ("op %i\n", i)
+	}
+//	a := test.new()
+//	test(a, "")
+}
+main()
