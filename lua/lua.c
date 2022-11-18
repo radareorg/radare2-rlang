@@ -9,11 +9,11 @@
 
 #define LIBDIR PREFIX"/lib"
 
-static lua_State *L;
-static RCore* core = NULL;
-static int lua_run(RLang *lang, const char *code, int len);
+static R_TH_LOCAL lua_State *L;
+static R_TH_LOCAL RCore* core = NULL;
+static bool lua_run(RLang *lang, const char *code, int len);
 
-static int r_lang_lua_report (lua_State *L, int status) {
+static int r_lang_lua_report(lua_State *L, int status) {
 	const char *msg;
 	if (status) {
 		msg = lua_tostring(L, -1);
@@ -104,7 +104,7 @@ static int init(RLang *lang) {
 	return true;
 }
 
-static int lua_run(RLang *lang, const char *code, int len) {
+static bool lua_run(RLang *lang, const char *code, int len) {
 	core = lang->user; // XXX buggy?
 	if (len == 0) len = strlen (code);
 	luaL_loadbuffer (L, code, len, ""); // \n included
@@ -117,7 +117,7 @@ static int lua_run(RLang *lang, const char *code, int len) {
 	return true;
 }
 
-static struct r_lang_plugin_t r_lang_plugin_lua = {
+static RLangPlugin r_lang_plugin_lua = {
 	.name = "lua",
 	.ext = "lua",
 	.desc = "LUA language extension",

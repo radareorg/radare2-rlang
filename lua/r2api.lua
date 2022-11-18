@@ -108,6 +108,8 @@ function chomp(text)
 	return string.gsub(text, "\n$", "")
 end
 
+function Trim (x) return chop(x) end
+
 function chop(text)
 	if text == nil then return "" end
 	text = string.gsub(text, " *$", "")
@@ -151,7 +153,7 @@ function Radare.get(value)
  	-- | cut -d ' ' -f 1");
 	foo = split(
 		string.gsub(
-		  cmd_str("? "..value),'(0x[^ ])', 
+		  r2cmd("? "..value),'(0x[^ ])', 
 			function(x)return x end),';')
 	return tonumber(foo[1])
 end
@@ -165,7 +167,7 @@ end
 
 Radare.cmd_help = 'Radare.cmd(command)\tExecutes a radare command and returns its output'
 function Radare.cmd(cmd)
-	return chomp(cmd_str(cmd))
+	return chomp(r2cmd(cmd))
 end
 
 Radare.system_help = 'Radare.system(command)\tExecute an IO system command'
@@ -738,11 +740,11 @@ function Radare.Debugger.remove_bp(addr)
 end
 
 function Radare.Debugger.alloc(size)
-	return cmd_str("!alloc "..size)
+	return r2cmd("!alloc "..size)
 end
 
 function Radare.Debugger.free(addr) -- rename to dealloc?
-	return cmd_str("!free "..addr)
+	return r2cmd("!free "..addr)
 end
 
 function Radare.Debugger.dump(dirname)
