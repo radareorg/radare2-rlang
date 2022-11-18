@@ -15,9 +15,10 @@
 
 #undef LIST_HEAD
 #include "r_core.h"
-static struct r_core_t *core = NULL;
 
-static PerlInterpreter *my_perl = NULL;
+static R_TH_LOCAL RCore *core = NULL;
+
+static R_TH_LOCAL PerlInterpreter *my_perl = NULL;
 
 static void perl_radare_cmd(pTHX_ CV* cv) {
 	char *cmd;
@@ -35,7 +36,7 @@ static void xs_init(pTHX) {
 	newXS ("r", perl_radare_cmd, __FILE__);
 }
 
-static int init(struct r_lang_t *lang) {
+static bool init(RLang *lang) {
 	char *perl_embed[] = { "", "-e", "0" };
 	core = lang->user;
 	my_perl = perl_alloc ();

@@ -7,6 +7,30 @@ export interface SearchResult {
 	data: string;
 };
 
+export interface Flag {
+	name: string;
+	size: number;
+	offset: number;
+};
+export interface CallRef {
+	addr: number;
+	type: string;
+	at: number;
+};
+
+export interface Function {
+	offset: number;
+	name: string;
+	size: number;
+	noreturn: boolean;
+	stackframe: number;
+	ebbs: number;
+	signature: string;
+	nbbs: number;
+	callrefs: CallRef[];
+	codexrefs: CallRef[];
+};
+
 export interface BinFile {
 	arch: string;
 	static: boolean;
@@ -152,6 +176,12 @@ export class R2Api {
 	ascii(msg: string): void {
 		this.r2.log(this.r2.cmd("?ea " + msg));
 	}
+	listFunctions() : Function[] {
+		return this.cmdj("aflj");
+	}
+	listFlags() : Flag[] {
+		return this.cmdj("fj");
+	}
 }
 
 export class NativePointer {
@@ -193,6 +223,10 @@ export class NativePointer {
 	basicBlock(): BasicBlock {
 		const bb: BasicBlock = this.api.cmdj("abj@" + this.addr);
 		return bb;
+	}
+	functionBasicBlocks(): BasicBlock[] {
+		const bbs : BasicBlock[] = this.api.cmdj("afbj@"+this.addr);
+		return bbs;
 	}
 	xrefs(): Reference[] {
 		return this.api.cmdj("axtj@" + this.addr);

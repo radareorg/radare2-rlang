@@ -9,9 +9,9 @@ function firstString(api: R2Api) : NativePointer {
 
 export function refsTest(r2: R2Pipe) {
 	const api = new R2Api(r2);
-	let refsToExit = api.ptr("sym.imp.exit").xrefs();
 	api.log("--");
 	api.ascii("r2 rocks");
+	let refsToExit = api.ptr("sym.imp.exit").xrefs();
 	if (refsToExit.length === 0) {
 		api.clippy("no refs? lets try to analyze");
 		api.analyzeProgram();

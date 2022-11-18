@@ -5,6 +5,52 @@ export interface SearchResult {
     type: string;
     data: string;
 }
+export interface Flag {
+    name: string;
+    size: number;
+    offset: number;
+}
+export interface CallRef {
+    addr: number;
+    type: string;
+    at: number;
+}
+export interface Function {
+    offset: number;
+    name: string;
+    size: number;
+    noreturn: boolean;
+    stackframe: number;
+    ebbs: number;
+    signature: string;
+    nbbs: number;
+    callrefs: CallRef[];
+    codexrefs: CallRef[];
+}
+export interface BinFile {
+    arch: string;
+    static: boolean;
+    va: boolean;
+    stripped: boolean;
+    pic: boolean;
+    relocs: boolean;
+    sanitize: boolean;
+    baddr: number;
+    binsz: number;
+    bintype: string;
+    bits: number;
+    canary: boolean;
+    class: string;
+    compiler: string;
+    endian: string;
+    machine: string;
+    nx: boolean;
+    os: string;
+    laddr: number;
+    linenum: boolean;
+    havecode: boolean;
+    intrp: string;
+}
 export interface Reference {
     from: number;
     type: string;
@@ -59,15 +105,20 @@ export declare class R2Api {
     setRegisters(obj: any): void;
     analyzeProgram(): void;
     hex(s: number | string): string;
-    step(): void;
-    stepOver(): void;
+    step(): R2Api;
+    stepOver(): R2Api;
     math(expr: number | string): number;
     searchString(s: string): SearchResult[];
+    binInfo(): BinFile;
     skip(): void;
     ptr(s: string | number): NativePointer;
     cmd(s: string): string;
     cmdj(s: string): any;
     log(s: string): string;
+    clippy(msg: string): void;
+    ascii(msg: string): void;
+    listFunctions(): Function[];
+    listFlags(): Flag[];
 }
 export declare class NativePointer {
     addr: string;
@@ -82,5 +133,6 @@ export declare class NativePointer {
     analyzeFunction(): void;
     name(): string;
     basicBlock(): BasicBlock;
+    functionBasicBlocks(): BasicBlock[];
     xrefs(): Reference[];
 }

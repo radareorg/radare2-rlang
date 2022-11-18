@@ -18,3 +18,4 @@ other:
 
 types:
 	tsc --declaration --allowJs --emitDeclarationOnly --outDir types r2pipe.ts
+.PHONY: types
