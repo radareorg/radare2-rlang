@@ -1,0 +1,46 @@
+{
+  "author": {
+    "name": "pancake"
+  },
+  "scripts": {
+    "build": "make",
+    "_indent": "semistandard --fix bin/*.js lib/*.js *.js"
+  },
+  "files": [
+    "LICENSE",
+    "types/r2pipe.d.js",
+    "README.md"
+  ],
+  "description": "API for r2 in typescript",
+  "homepage": "https://www.radare.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/radareorg/radare2.git"
+  },
+  "keywords": [
+    "radare2"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "Sergi Alvarez",
+      "email": "pancake@nopcode.org"
+    }
+  ],
+  "semistandard": {
+    "globals": [
+      "describe",
+      "context",
+      "before",
+      "beforeEach",
+      "after",
+      "afterEach",
+      "it",
+      "expect"
+    ]
+  },
+  "name": "applesign",
+  "version": "4.1.0"
+}
+

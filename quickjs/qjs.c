@@ -186,7 +186,6 @@ static bool eval(JSContext *ctx, const char *code) {
 }
 
 static bool lang_quickjs_run(RLang *lang, const char *code, int len) {
-	eprintf ("(RUN\n");
 	register_helpers (lang);
 	return eval (ctx, code);
 }
@@ -194,7 +193,6 @@ static bool lang_quickjs_run(RLang *lang, const char *code, int len) {
 static int lang_quickjs_file(RLang *lang, const char *file) {
 	int rc = -1;
 	register_helpers (lang);
-	eprintf ("(FILE\n");
 	char *code = r_file_slurp (file, NULL); 
 	if (code) {
 		rc = eval (ctx, code);
