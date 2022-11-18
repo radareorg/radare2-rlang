@@ -1,10 +1,36 @@
-export type InstructionType = "mov"| "jmp"| "cmp"| "nop" | "call";
+export type InstructionType = "mov" | "jmp" | "cmp" | "nop" | "call";
 export type InstructionFamily = "cpu" | "fpu" | "priv";
 
 export interface SearchResult {
-	offset:number;
+	offset: number;
 	type: string;
 	data: string;
+};
+
+export interface BinFile {
+	arch: string;
+	static: boolean;
+	va: boolean;
+	stripped: boolean;
+	pic: boolean;
+	relocs: boolean;
+	sanitize: boolean;
+	baddr: number;
+	binsz: number;
+	bintype: string;
+	bits: number;
+	canary: boolean;
+	class: string;
+	compiler: string;
+	endian: string;
+	machine: string;
+	nx: boolean;
+	os: string;
+	laddr: number;
+	linenum: boolean;
+	havecode: boolean;
+	intrp: string;
+
 };
 
 export interface Reference {
@@ -47,7 +73,7 @@ export interface Instruction {
 	bytes: string;
 	id: number;
 	refptr: number;
-	direction: "read"|"write";
+	direction: "read" | "write";
 	stackptr: number;
 	stack: string; // "inc"|"dec"|"get"|"set"|"nop"|"null"; 
 }
@@ -67,7 +93,7 @@ export class R2Api {
 	clearScreen() {
 		this.r2.cmd("!clear");
 	}
-	getRegisters() : any {
+	getRegisters(): any {
 		// this.r2.log("winrar" + JSON.stringify(JSON.parse(this.r2.cmd("drj")),null, 2) );
 		return this.cmdj("drj");
 	}
@@ -77,29 +103,38 @@ export class R2Api {
 			this.r2.cmd("dr " + r + "=" + v);
 		}
 	}
-	analyzeProgram() : void {
+	analyzeProgram(): void {
 		this.r2.cmd("aa");
 	}
-	hex(s: number|string) : string {
+	hex(s: number | string): string {
 		return this.r2.cmd("?v " + s).trim();
 	}
-	step() : void {
+	step(): R2Api {
 		this.r2.cmd("ds");
+		return this;
 	}
-	stepOver() {
+	stepOver(): R2Api {
 		this.r2.cmd("dso");
+		return this;
 	}
-	math(expr: number|string) : number{
+	math(expr: number | string): number {
 		return +this.r2.cmd("?v " + expr);
 	}
-	searchString(s: string) : SearchResult[] {
-		const res : SearchResult[] = this.cmdj("/j " + s);
+	searchString(s: string): SearchResult[] {
+		const res: SearchResult[] = this.cmdj("/j " + s);
 		return res;
+	}
+	binInfo(): BinFile {
+		try {
+			return this.cmdj("ij~{bin}");
+		} catch (e: any) {
+			return {} as BinFile;
+		}
 	}
 	skip() {
 		this.r2.cmd("dss");
 	}
-	ptr(s: string|number): NativePointer {
+	ptr(s: string | number): NativePointer {
 		return new NativePointer(this, s);
 	}
 	cmd(s: string): string {
@@ -108,15 +143,21 @@ export class R2Api {
 	cmdj(s: string): any {
 		return JSON.parse(this.cmd(s));
 	}
-	log(s:string) {
+	log(s: string) {
 		return this.r2.log(s);
+	}
+	clippy(msg: string): void {
+		this.r2.log(this.r2.cmd("?E " + msg));
+	}
+	ascii(msg: string): void {
+		this.r2.log(this.r2.cmd("?ea " + msg));
 	}
 }
 
 export class NativePointer {
 	addr: string;
 	api: R2Api;
-	constructor(api: R2Api, s: string|number) {
+	constructor(api: R2Api, s: string | number) {
 		this.api = api;
 		// this.api.r2.log("NP " + s);
 		this.addr = "" + s;
@@ -124,7 +165,7 @@ export class NativePointer {
 	readByteArray(len: number) {
 		return JSON.parse(this.api.cmd(`p8j ${len}@${this.addr}`));
 	}
-	add(a: number) : NativePointer {
+	add(a: number): NativePointer {
 		this.addr = this.api.cmd(`?v ${this.addr} + ${a}`);
 		return this;
 	}
@@ -132,28 +173,28 @@ export class NativePointer {
 		this.addr = this.api.cmd(`?v ${this.addr} - ${a}`);
 		return this;
 	}
-	writeCString(s: string) : NativePointer {
-		this.api.cmd("\"w "+s+"\"");
+	writeCString(s: string): NativePointer {
+		this.api.cmd("\"w " + s + "\"");
 		return this;
 	}
-	readCString() : string {
+	readCString(): string {
 		return JSON.parse(this.api.cmd(`psj@${this.addr}`)).string;
 	}
-	instruction() : Instruction {
-		const op : any = this.api.cmdj(`aoj@${this.addr}`)[0];
+	instruction(): Instruction {
+		const op: any = this.api.cmdj(`aoj@${this.addr}`)[0];
 		return op;
 	}
 	analyzeFunction() {
-		this.api.cmd("af@"+this.addr);
+		this.api.cmd("af@" + this.addr);
 	}
-	name() : string {
-		return this.api.cmd("fd "+this.addr).trim();
+	name(): string {
+		return this.api.cmd("fd " + this.addr).trim();
 	}
 	basicBlock(): BasicBlock {
-		const bb : BasicBlock = this.api.cmdj("abj@"+this.addr);
+		const bb: BasicBlock = this.api.cmdj("abj@" + this.addr);
 		return bb;
 	}
-	xrefs() : Reference[] {
-		return this.api.cmdj("axtj");
+	xrefs(): Reference[] {
+		return this.api.cmdj("axtj@" + this.addr);
 	}
 }

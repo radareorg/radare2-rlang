@@ -1,5 +1,5 @@
 all: require.js
-	tsc --outFile out.js --module amd index.ts r2pipe.ts
+	tsc --outFile out.js --module amd index.ts r2pipe.ts examples.ts
 	cat boilerplate.js require.js out.js > index.js
 	-pkill -USR1 r2
 
