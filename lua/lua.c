@@ -13,6 +13,12 @@ static R_TH_LOCAL lua_State *L;
 static R_TH_LOCAL RCore* core = NULL;
 static bool lua_run(RLang *lang, const char *code, int len);
 
+#include "lib/inspect.lua.c"
+#undef _BUFFER_SIZE
+#include "lib/json.lua.c"
+#undef _BUFFER_SIZE
+#include "lib/r2api.lua.c"
+
 static int r_lang_lua_report(lua_State *L, int status) {
 	const char *msg;
 	if (status) {
@@ -45,7 +51,7 @@ static int lua_cmd_str(lua_State *L) {
 	return 1;  /* number of results */
 }
 
-static int lua_cmd (lua_State *L) {
+static int lua_cmd(lua_State *L) {
 	const char *s = lua_tostring(L, 1);  /* get argument */
 	lua_pushnumber (L, r_core_cmd (core, s, 0));  /* push result */
 	return 1;  /* number of results */
@@ -56,8 +62,7 @@ static int lua_cmd (lua_State *L) {
 static int init(RLang *lang) {
 	char a[128];
  	L = (lua_State*)lua_open();
-	if (L==NULL) {
-		printf("Exit\n");	
+	if (L == NULL) {
 		return 0;
 	}
 
@@ -74,16 +79,33 @@ static int init(RLang *lang) {
 	lua_register (L, "r2cmd", &lua_cmd_str);
 	lua_pushcfunction(L, lua_cmd_str);
 	lua_setglobal(L,"r2cmd");
-
 #if 0
 	// DEPRECATED: cmd = radare_cmd_str
 	lua_register(L, "cmd", &lua_cmd);
 	lua_pushcfunction(L,lua_cmd);
 	lua_setglobal(L,"cmd");
 #endif
+#if 0
+	luaL_loadbuffer (L, (const char *)json_lua, 9639, "json.lua");
+	luaL_loadbuffer (L, (const char *)inspect_lua, -1, "inspect.lua");
+	if (lua_pcall (L, 0, 0, 1) != 0) {
+		eprintf ("syntax error(lang_lua): %s in %s\n",
+				lua_tostring(L, -1), "inspect.lua");
+	}
+	luaL_loadbuffer (L, (const char *)r2api_lua, -1, "r2api.lua");
+	if (lua_pcall (L, 0, 0, 1) != 0) {
+		eprintf ("syntax error(lang_lua): %s in %s\n",
+				lua_tostring(L, -1), "r2api");
+	}
+#else
+	lua_run (lang, (const char *)json_lua, -1);
+	lua_run (lang, (const char *)r2api_lua, -1);
+	lua_run (lang, (const char *)inspect_lua, -1);
+#endif
 
+// add custom loader for requiring from memory instead
 	lua_run (lang, "package.path=os.getenv(\"HOME\")..\"/.local/share/radare2/plugins/lua/?.lua;\"..package.path", 0);
-	lua_run (lang, "json = require \"json\"", 0);
+// 	lua_run (lang, "json = require \"json\"", 0);
 	lua_run (lang, "function r2cmdj(x)\n" \
 		"	return json.decode(r2cmd(x))\n" 
 		"end\n", 0);
@@ -100,20 +122,22 @@ static int init(RLang *lang) {
 	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
 	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
 	fflush (stdout);
-
 	return true;
 }
 
 static bool lua_run(RLang *lang, const char *code, int len) {
 	core = lang->user; // XXX buggy?
-	if (len == 0) len = strlen (code);
+	if (len < 1) {
+		len = strlen (code);
+	}
+	// RStrBuffer *sb = r_strbuf_buff
 	luaL_loadbuffer (L, code, len, ""); // \n included
 	if (lua_pcall (L, 0, 0, 1) != 0) {
 		eprintf ("syntax error(lang_lua): %s in %s\n",
-                 lua_tostring(L, -1), code);
+				lua_tostring(L, -1), "");
 	}
 	clearerr (stdin);
-	//lua_close(L); // TODO
+	// lua_close(L); // TODO
 	return true;
 }
 

@@ -1,5 +1,5 @@
-require"json"
-local inspect = require"inspect"
+-- require"json"
+-- local inspect = require"inspect"
 
 -- generic utilities
 function split(text, sep)
@@ -47,7 +47,7 @@ function r2.functionBasicBlocks()
   return split(r2cmd("ablq"),"\n")
 end
 
-local inspect = require"inspect"
+-- local inspect = require"inspect"
 function r2:ptr (at)
 	o = {addr = trim(at)}   -- create object if user does not provide one
 	setmetatable(o, self)

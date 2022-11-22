@@ -1,5 +1,5 @@
-require"r2api"
-local inspect = require"inspect"
+-- require"r2api"
+-- local inspect = require"inspect"
 
 -- function r2cmd() end
 

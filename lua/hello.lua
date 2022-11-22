@@ -1,12 +1,12 @@
-require "r2api"
-require "json"
+--# require "r2api"
+--# require "json"
 
 print("Hello World")
-print(r.cmd("?E Hello World"))
+print(r2cmd("?E Hello World"))
 
 local color = Trim(" red ") -- r.api.Config.get("scr.color")
 print(color)
 
 -- hello world
-local res = r.cmd("afl")
+local res = r2cmd("afl")
 print(res)
