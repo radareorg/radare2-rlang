@@ -1,0 +1,58 @@
+{
+  "author": {
+    "name": "Sergi Alvarez"
+  },
+  "engines": {
+    "node": ">=16",
+    "npm": ">=8.6.0"
+  },
+  "scripts": {
+    "semi": "semistandard",
+    "indent": "semistandard --fix bin/*.js lib/*.js *.js",
+    "unzip-lzfse": "git clone https://github.com/sskaje/unzip-lzfse ; cd unzip-lzfse ; chmod +x unix/configure ; LZFSE_PATH=/usr/local make -f unix/Makefile CF='-DUSE_LZFSE=1 -c -O3 -Wall -DBSD -I. -Ibzip2 -DUNIX' LF2=-llzfse all",
+    "test": "mocha",
+    "dist": "./dist.sh",
+    "dist-all": "./dist.sh macos linux freebsd alpine win"
+  },
+  "devDependencies": {
+    "npm": "^8.6.0",
+    "pkg": "5.6.0",
+    "semistandard": "^16.0.1",
+    "castl": "*"
+  },
+  "dependencies": {
+    "colors": "1.4.0"
+  },
+  "overrides": {
+    "plist": "github:TooTallNate/plist.js#e17373ef96510a606b62553bd28845842133ba12"
+  },
+  "files": [
+    "index.ts",
+    "README.md",
+    "dist.sh"
+  ],
+  "description": "API to resign IPA files",
+  "homepage": "https://www.radare.org",
+  "license": "MIT",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "Sergi Alvarez",
+      "email": "pancake@nopcode.org"
+    }
+  ],
+  "semistandard": {
+    "globals": [
+      "describe",
+      "context",
+      "before",
+      "beforeEach",
+      "after",
+      "afterEach",
+      "it",
+      "expect"
+    ]
+  },
+  "name": "r2lua",
+  "version": "4.1.0"
+}
