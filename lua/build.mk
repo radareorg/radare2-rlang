@@ -7,8 +7,8 @@ LUA_VERSION=5.4.4
 LUA_CFLAGS+=-Ilua-$(LUA_VERSION)/src
 LUA_LDFLAGS+=`ls lua-$(LUA_VERSION)/src/*.c | grep -v lua.c | grep -v luac.c`
 endif
-CFLAGS+=-Oz
-LUA_LDFLAGS+=-Oz -flto
+# CFLAGS+=-Os
+# LUA_LDFLAGS+=-Os -flto
 
 lua lang_lua.${EXT_SO}: lua-sync
 	-${CC} $(LUA_CFLAGS) ${CFLAGS} -fPIC ${LDFLAGS_LIB} -o lang_lua.${EXT_SO} lua.c ${LUA_LDFLAGS}

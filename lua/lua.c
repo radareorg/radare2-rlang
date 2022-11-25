@@ -1,16 +1,21 @@
-/* lua extension for libr (radare2) - 2013 - pancake */
+/* lang.lua plugin for r2 - 2013-2022 - pancake */
 
-#include "r_lib.h"
-#include "r_core.h"
-#include "r_lang.h"
+#include <r_lib.h>
+#include <r_core.h>
+#include <r_lang.h>
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
 
 #define LIBDIR PREFIX"/lib"
 
-static R_TH_LOCAL lua_State *L;
-static R_TH_LOCAL RCore* core = NULL;
+typedef struct r_lua_state_t {
+	lua_State *state;
+	RCore* core;
+} RLuaState;
+
+static R_TH_LOCAL RLuaState G = { NULL, NULL };
+
 static bool lua_run(RLang *lang, const char *code, int len);
 
 #include "lib/inspect.lua.c"
@@ -20,40 +25,38 @@ static bool lua_run(RLang *lang, const char *code, int len);
 #include "lib/r2api.lua.c"
 
 static int r_lang_lua_report(lua_State *L, int status) {
-	const char *msg;
+	const char *msg = NULL;
 	if (status) {
-		msg = lua_tostring(L, -1);
+		msg = lua_tostring (G.state, -1);
 		if (!msg) {
 			msg = "(error with no message)";
 		}
 		eprintf ("status=%d, %s\n", status, msg);
-		lua_pop (L, 1);
+		lua_pop (G.state, 1);
 	}
 	return status;
 }
 
 static int r_lua_file(void *user, const char *file) {
-	int status = luaL_loadfile (L, file);
-	if (status)
-		return r_lang_lua_report (L,status);
-	status = lua_pcall (L,0,0,0);
-	if (status)
-		return r_lang_lua_report (L,status);
-	return 0;
+	int status = luaL_loadfile (G.state, file);
+	if (status) {
+		return r_lang_lua_report (G.state, status);
+	}
+	status = lua_pcall (G.state, 0, 0, 0);
+	return status? r_lang_lua_report (G.state, status): 0;
 }
 
 static int lua_cmd_str(lua_State *L) {
-	char *str;
-	const char *s = lua_tostring(L, 1);  /* get argument */
-	str = r_core_cmd_str (core, s);
-	lua_pushstring (L, str);  /* push result */
+	const char *s = lua_tostring (G.state, 1);  /* get argument */
+	char *str = r_core_cmd_str (G.core, s);
+	lua_pushstring (G.state, str);  /* push result */
 	free (str);
 	return 1;  /* number of results */
 }
 
 static int lua_cmd(lua_State *L) {
-	const char *s = lua_tostring(L, 1);  /* get argument */
-	lua_pushnumber (L, r_core_cmd (core, s, 0));  /* push result */
+	const char *s = lua_tostring (G.state, 1);  /* get argument */
+	lua_pushnumber (G.state, r_core_cmd (G.core, s, 0));  /* push result */
 	return 1;  /* number of results */
 }
 
@@ -61,41 +64,41 @@ static int lua_cmd(lua_State *L) {
 
 static int init(RLang *lang) {
 	char a[128];
- 	L = (lua_State*)lua_open();
-	if (L == NULL) {
+ 	G.state = (lua_State*)lua_open();
+	if (G.state == NULL) {
 		return 0;
 	}
 
-	lua_gc (L, LUA_GCSTOP, 0);
-	luaL_openlibs (L);
-	luaopen_base (L);
-	luaopen_string (L);
+	lua_gc (G.state, LUA_GCSTOP, 0);
+	luaL_openlibs (G.state);
+	luaopen_base (G.state);
+	luaopen_string (G.state);
 	//luaopen_io(L); // PANIC!!
-	lua_gc (L, LUA_GCRESTART, 0);
+	lua_gc (G.state, LUA_GCRESTART, 0);
 
-	lua_pushlightuserdata (L, lang->user);
-	lua_setglobal (L, "core");
+	lua_pushlightuserdata (G.state, lang->user);
+	lua_setglobal (G.state, "core");
 
-	lua_register (L, "r2cmd", &lua_cmd_str);
-	lua_pushcfunction(L, lua_cmd_str);
-	lua_setglobal(L,"r2cmd");
+	lua_register (G.state, "r2cmd", &lua_cmd_str);
+	lua_pushcfunction (G.state, lua_cmd_str);
+	lua_setglobal (G.state,"r2cmd");
 #if 0
 	// DEPRECATED: cmd = radare_cmd_str
-	lua_register(L, "cmd", &lua_cmd);
-	lua_pushcfunction(L,lua_cmd);
-	lua_setglobal(L,"cmd");
+	lua_register(G.state, "cmd", &lua_cmd);
+	lua_pushcfunction(G.state,lua_cmd);
+	lua_setglobal(G.state,"cmd");
 #endif
 #if 0
-	luaL_loadbuffer (L, (const char *)json_lua, 9639, "json.lua");
-	luaL_loadbuffer (L, (const char *)inspect_lua, -1, "inspect.lua");
-	if (lua_pcall (L, 0, 0, 1) != 0) {
+	luaL_loadbuffer (G.state, (const char *)json_lua, 9639, "json.lua");
+	luaL_loadbuffer (G.state, (const char *)inspect_lua, -1, "inspect.lua");
+	if (lua_pcall (G.state, 0, 0, 1) != 0) {
 		eprintf ("syntax error(lang_lua): %s in %s\n",
-				lua_tostring(L, -1), "inspect.lua");
+				lua_tostring(G.state, -1), "inspect.lua");
 	}
-	luaL_loadbuffer (L, (const char *)r2api_lua, -1, "r2api.lua");
-	if (lua_pcall (L, 0, 0, 1) != 0) {
+	luaL_loadbuffer (G.state, (const char *)r2api_lua, -1, "r2api.lua");
+	if (lua_pcall (G.state, 0, 0, 1) != 0) {
 		eprintf ("syntax error(lang_lua): %s in %s\n",
-				lua_tostring(L, -1), "r2api");
+				lua_tostring(G.state, -1), "r2api");
 	}
 #else
 	lua_run (lang, (const char *)json_lua, -1);
@@ -126,15 +129,14 @@ static int init(RLang *lang) {
 }
 
 static bool lua_run(RLang *lang, const char *code, int len) {
-	core = lang->user; // XXX buggy?
+	G.core = lang->user; // XXX buggy?
 	if (len < 1) {
 		len = strlen (code);
 	}
 	// RStrBuffer *sb = r_strbuf_buff
-	luaL_loadbuffer (L, code, len, ""); // \n included
-	if (lua_pcall (L, 0, 0, 1) != 0) {
-		eprintf ("syntax error(lang_lua): %s in %s\n",
-				lua_tostring(L, -1), "");
+	luaL_loadbuffer (G.state, code, len, ""); // \n included
+	if (lua_pcall (G.state, 0, 0, 1) != 0) {
+		R_LOG_ERROR ("syntax: %s in %s\n", lua_tostring (G.state, -1), "");
 	}
 	clearerr (stdin);
 	// lua_close(L); // TODO
@@ -144,12 +146,10 @@ static bool lua_run(RLang *lang, const char *code, int len) {
 static RLangPlugin r_lang_plugin_lua = {
 	.name = "lua",
 	.ext = "lua",
-	.desc = "LUA language extension",
-	.help = NULL,
+	.desc = "LUA 5.4.4 language extension",
 	.run = lua_run,
 	.init = (void*)init,
 	.run_file = (void*)r_lua_file,
-	.set_argv = NULL,
 };
 
 #ifndef CORELIB
