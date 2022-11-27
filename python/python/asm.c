@@ -136,7 +136,7 @@ PyObject *Radare_plugin_asm(Radare* self, PyObject *args) {
 	if (ptr) {
 		Py_INCREF (ptr);
 		py_disassemble_cb = ptr;
-		ap->disassemble = py_disassemble;
+		// ap->disassemble = py_disassemble;
 	}
 	ptr = getF (o, "assemble");
 	if (ptr) {
