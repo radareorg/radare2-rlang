@@ -47,7 +47,7 @@ export function newTestProgram(r2: R2Pipe) {
 }
 
 export function testProgram(r2: R2Pipe) {
-	var api = new R2Api(r2);
+	let api = new R2Api(r2);
 	api.clearScreen();
 
 	const p = api.ptr("entry0");
