@@ -4,7 +4,7 @@ CFLAGS+=$(shell pkg-config --cflags r_core ${LUAPKG})
 LUA_LDFLAGS+=$(shell pkg-config --libs r_lang ${LUAPKG})
 else
 LUA_VERSION=5.4.4
-LUA_CFLAGS+=-Ilua-$(LUA_VERSION)/src
+LUA_CFLAGS+=-Ilua-$(LUA_VERSION)/src -g
 LUA_LDFLAGS+=`ls lua-$(LUA_VERSION)/src/*.c | grep -v lua.c | grep -v luac.c`
 endif
 # CFLAGS+=-Os
