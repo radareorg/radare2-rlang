@@ -5,7 +5,7 @@ print("Hello World")
 print(r2cmd("?E Hello World"))
 
 function foo()
-	print(r2.cmd("ij"))
+	print(r2.cmdj("x"))
 end
 xpcall(foo,print)
 

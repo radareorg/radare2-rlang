@@ -107,6 +107,7 @@ export interface R2Pipe {
 	log(msg: string): string;
 }
 
+
 export class R2Api {
 	public r2: R2Pipe;
 

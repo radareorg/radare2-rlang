@@ -284,6 +284,10 @@ end
 
 
 function inspect.inspect(root, options)
+if root == nil then
+root = options
+options= {}
+end
    options = options or {}
 
    local depth = options.depth or (math.huge)

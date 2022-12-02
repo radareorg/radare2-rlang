@@ -368,6 +368,10 @@ parse = function(str, idx)
   if f then
     return f(str, idx)
   end
+  if str == "" then
+    return {}
+  end
+  print("json decode error input:\n" .. str)
   decode_error(str, idx, "unexpected character '" .. chr .. "'")
 end
 

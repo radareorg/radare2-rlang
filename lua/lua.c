@@ -151,6 +151,7 @@ static void *init(RLangSession *s) {
 	lua_run (s, (const char *)r2api_lua, -1);
 	lua_run (s, (const char *)inspect_lua, -1);
 	lua_run (s, "json.parse = json.decode", 0);
+	lua_run (s, "JSON = json", 0);
 #endif
 
 	// add custom loader for requiring from memory instead
