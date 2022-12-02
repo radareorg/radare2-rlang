@@ -16,6 +16,31 @@
 #undef _BUFFER_SIZE
 #include "lib/r2api.lua.c"
 
+static void stackDump (lua_State *L) {
+	int i, top = lua_gettop(L);
+	for (i = 1; i <= top; i++) {  /* repeat for each level */
+		int t = lua_type (L, i);
+		switch (t) {
+		case LUA_TSTRING:  /* strings */
+			printf ("`%s'", lua_tostring(L, i));
+			break;
+
+		case LUA_TBOOLEAN:  /* booleans */
+			printf (lua_toboolean(L, i) ? "true" : "false");
+			break;
+
+		case LUA_TNUMBER:  /* numbers */
+			printf ("%g", lua_tonumber(L, i));
+			break;
+
+		default:  /* other values */
+			printf ("%s", lua_typename(L, t));
+			break;
+		}
+		printf("  ");  /* put a separator */
+	}
+	printf("\n");  /* end the listing */
+}
 
 static bool lua_run(RLangSession *s, const char *code, int len) {
 	RCore *core = s->lang->user;
@@ -23,21 +48,24 @@ static bool lua_run(RLangSession *s, const char *code, int len) {
 	if (len < 1) {
 		len = strlen (code);
 	}
+	lua_settop (L, 0); // reset the lua stack
 	luaL_loadbuffer (L, code, len, ""); // \n included
-	if (lua_pcall (L, 0, 0, 1) != 0) {
+	if (lua_pcall (L, 0, 0, 1) != LUA_OK) {
 		R_LOG_ERROR ("syntax: %s in %s\n", lua_tostring (L, -1), "");
 	}
+	// show stack dump if anything is still there
+	stackDump (L);
 	clearerr (stdin);
 	return true;
 }
 
 static int r_lang_lua_report(lua_State *L, int status) {
-	const char *msg = NULL;
 	if (status) {
-		msg = lua_tostring (L, -1);
+		const char *msg = lua_tostring (L, -1);
 		if (!msg) {
 			msg = "(error with no message)";
 		}
+		R_LOG_ERROR ("lua error: %s", msg);
 		lua_pop (L, 1);
 	}
 	return status;
@@ -46,11 +74,11 @@ static int r_lang_lua_report(lua_State *L, int status) {
 static int r_lua_file(RLangSession *s, const char *file) {
 	lua_State *L = s->plugin_data;
 	int res = luaL_loadfile (L, file);
-	if (res) {
+	if (res != LUA_OK) {
 		return r_lang_lua_report (L, res);
 	}
 	res = lua_pcall (L, 0, 0, 0);
-	return res? r_lang_lua_report (L, res): 0;
+	return (res != LUA_OK)? r_lang_lua_report (L, res): 0;
 }
 
 static int lua_cmd_str(lua_State *L) {
