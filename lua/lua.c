@@ -38,7 +38,6 @@ static int r_lang_lua_report(lua_State *L, int status) {
 		if (!msg) {
 			msg = "(error with no message)";
 		}
-		eprintf ("status=%d, %s\n", status, msg);
 		lua_pop (L, 1);
 	}
 	return status;
@@ -46,7 +45,6 @@ static int r_lang_lua_report(lua_State *L, int status) {
 
 static int r_lua_file(RLangSession *s, const char *file) {
 	lua_State *L = s->plugin_data;
-	eprintf ("init flie %s\n", file);
 	int res = luaL_loadfile (L, file);
 	if (res) {
 		return r_lang_lua_report (L, res);
@@ -67,13 +65,11 @@ static int lua_cmd_str(lua_State *L) {
 static int lua_cmd(lua_State *L) {
 	RCore *core = L->l_G->ud_warn;
 	const char *s = lua_tostring (L, 1);  /* get argument */
-	eprintf ("cmd %s\n", s);
 	lua_pushnumber (L, r_core_cmd (core, s, 0));  /* push result */
 	return 1;  /* number of results */
 }
 
 static void *init(RLangSession *s) {
-	eprintf ("init happens\n");
 	lua_State *L = luaL_newstate ();
 	if (!L) {
 		return NULL;
