@@ -17,29 +17,29 @@
 #include "lib/r2api.lua.c"
 
 static void stackDump (lua_State *L) {
-	int i, top = lua_gettop(L);
+	int i, top = lua_gettop (L);
+	if (top < 1) {
+		return;
+	}
 	for (i = 1; i <= top; i++) {  /* repeat for each level */
 		int t = lua_type (L, i);
 		switch (t) {
 		case LUA_TSTRING:  /* strings */
 			printf ("`%s'", lua_tostring(L, i));
 			break;
-
 		case LUA_TBOOLEAN:  /* booleans */
 			printf (lua_toboolean(L, i) ? "true" : "false");
 			break;
-
 		case LUA_TNUMBER:  /* numbers */
 			printf ("%g", lua_tonumber(L, i));
 			break;
-
 		default:  /* other values */
 			printf ("%s", lua_typename(L, t));
 			break;
 		}
 		printf("  ");  /* put a separator */
 	}
-	printf("\n");  /* end the listing */
+	printf ("\n");  /* end the listing */
 }
 
 static bool lua_run(RLangSession *s, const char *code, int len) {
@@ -53,13 +53,12 @@ static bool lua_run(RLangSession *s, const char *code, int len) {
 	if (lua_pcall (L, 0, 0, 1) != LUA_OK) {
 		R_LOG_ERROR ("syntax: %s in %s\n", lua_tostring (L, -1), "");
 	}
-	// show stack dump if anything is still there
-	stackDump (L);
+	stackDump (L); // show stack dump if anything is still there
 	clearerr (stdin);
 	return true;
 }
 
-static int r_lang_lua_report(lua_State *L, int status) {
+static bool report_error(lua_State *L, int status) {
 	if (status) {
 		const char *msg = lua_tostring (L, -1);
 		if (!msg) {
@@ -67,18 +66,24 @@ static int r_lang_lua_report(lua_State *L, int status) {
 		}
 		R_LOG_ERROR ("lua error: %s", msg);
 		lua_pop (L, 1);
+		return false;
 	}
-	return status;
+	return true;
 }
 
-static int r_lua_file(RLangSession *s, const char *file) {
+static bool r_lua_file(RLangSession *s, const char *file) {
 	lua_State *L = s->plugin_data;
 	int res = luaL_loadfile (L, file);
 	if (res != LUA_OK) {
-		return r_lang_lua_report (L, res);
+		report_error (L, res);
+		return false;
 	}
 	res = lua_pcall (L, 0, 0, 0);
-	return (res != LUA_OK)? r_lang_lua_report (L, res): 0;
+	if (res != LUA_OK) {
+		report_error (L, res);
+		return false;
+	}
+	return true;
 }
 
 static int lua_cmd_str(lua_State *L) {
@@ -145,9 +150,10 @@ static void *init(RLangSession *s) {
 	lua_run (s, (const char *)json_lua, -1);
 	lua_run (s, (const char *)r2api_lua, -1);
 	lua_run (s, (const char *)inspect_lua, -1);
+	lua_run (s, "json.parse = json.decode", 0);
 #endif
 
-// add custom loader for requiring from memory instead
+	// add custom loader for requiring from memory instead
 	lua_run (s, "package.path=os.getenv(\"HOME\")..\"/.local/share/radare2/plugins/lua/?.lua;\"..package.path", 0);
 // 	lua_run (s, "json = require \"json\"", 0);
 	lua_run (s, "function r2cmdj(x)\n" \
@@ -165,7 +171,6 @@ static void *init(RLangSession *s) {
 	/// DEPRECATED theres no need for this. better embed everything in into this .c
 	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
 	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
-	fflush (stdout);
 	return L;
 }
 
@@ -174,8 +179,8 @@ static RLangPlugin r_lang_plugin_lua = {
 	.ext = "lua",
 	.desc = "LUA 5.4.4 language extension",
 	.run = lua_run,
-	.init = (void*)init,
-	.run_file = (void*)r_lua_file,
+	.init = init,
+	.run_file = r_lua_file,
 };
 
 #ifndef CORELIB
