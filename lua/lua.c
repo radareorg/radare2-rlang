@@ -90,7 +90,7 @@ static int lua_cmd_str(lua_State *L) {
 	RCore *core = L->l_G->ud_warn;
 	const char *s = lua_tostring (L, 1);  /* get argument */
 	char *str = r_core_cmd_str (core, s);
-	lua_pushstring (L, str);  /* push result */
+	lua_pushstring (L, r_str_get (str));  /* push result */
 	free (str);
 	return 1;  /* number of results */
 }

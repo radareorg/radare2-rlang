@@ -25,7 +25,7 @@ static R_TH_LOCAL RCore *Gcore = NULL;
 static R_TH_LOCAL bool is_init = false;
 
 static void js_dump_obj(JSContext *ctx, FILE *f, JSValueConst val) {
-	const char *str = JS_ToCString(ctx, val);
+	const char *str = JS_ToCString (ctx, val);
 	if (str) {
 		fprintf (f, "%s\n", str);
 		JS_FreeCString (ctx, str);
@@ -107,8 +107,9 @@ static int js_r2_init(JSContext *ctx, JSModuleDef *m) {
 static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 	JSContext *ctx = JS_NewContext (rt);
 	// JSContext *ctx = JS_NewContextRaw (rt);
-	if (!ctx)
+	if (!ctx) {
 		return NULL;
+	}
 #ifdef CONFIG_BIGNUM
 	if (bignum_ext) {
 		JS_AddIntrinsicBigFloat(ctx);
@@ -118,7 +119,7 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 	}
 #endif
 #if QJS_LIBC
-     js_std_init_handlers(rt);
+	js_std_init_handlers(rt);
 	/* system modules */
 	js_init_module_os(ctx, "os");
 	js_init_module_std(ctx, "std");
@@ -185,8 +186,8 @@ static bool eval(JSContext *ctx, const char *code) {
 	return true;
 }
 
-static bool lang_quickjs_run(RLang *lang, const char *code, int len) {
-	register_helpers (lang);
+static bool lang_quickjs_run(RLangSession *s, const char *code, int len) {
+	register_helpers (s->lang);
 	return eval (ctx, code);
 }
 
