@@ -1,0 +1,11 @@
+
+
+
+async function main() {
+	const r2 = await import("r2");
+	const std = await import("std");
+	r2.log(JSON.stringify(Object.keys(std))); // "HELLO WORLD");
+	r2.log("Hello World");
+}
+
+main();
