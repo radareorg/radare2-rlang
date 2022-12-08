@@ -11,7 +11,7 @@ WGET?=curl -o
 endif
 
 lang_mujs.$(EXT_SO): plugin.o mujs
-	-$(CC) -g -std=c99 -flto -Oz $(DUK_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
+	-$(CC) -std=c99 -flto -Oz $(DUK_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
 		-o lang_mujs.$(EXT_SO) plugin.c
 
 all: mujs

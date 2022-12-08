@@ -107,7 +107,10 @@ static bool duk_assemble(RArchSession *s, RAnalOp *op, RArchEncodeMask mask) {
 				duk_get_prop_index (Gctx, -2, i);
 				buf[i] = duk_to_int (Gctx, -1);
 			}
-			r_anal_op_set_bytes (op, op->addr, buf, res);
+			free (op->bytes);
+			op->bytes = r_mem_dup (buf, res);
+			op->size = res;
+			// r_anal_op_set_bytes (op, op->addr, buf, res);
 			free (buf);
 		}
 	}
