@@ -1,0 +1,8 @@
+function main() {
+	var res = r2.cmd("x");
+	console.log(res);
+	// var p = new Promise();
+	// setTimeout(function a() { console.log("pop"); }, 1000);
+}
+
+main();
