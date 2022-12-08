@@ -1,8 +1,24 @@
+// example r2script
+
 function main() {
-	var res = r2.cmd("x");
+	var res = r2.cmd("x 64");
 	console.log(res);
+
+	var res = r2.call("pd 3");
+	console.log(res);
+
+	// stuff not supported
 	// var p = new Promise();
 	// setTimeout(function a() { console.log("pop"); }, 1000);
+
+	// filesystem test
+	fs.writeFileSync("test.txt", "patata");
+	var data = fs.readFileSync("test.txt");
+	console.log(data);
+	r2.call("rm test.txt");
+
+	var msg = b64("hello world");
+	console.log(msg);
 }
 
 main();
