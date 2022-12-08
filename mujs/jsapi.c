@@ -7,6 +7,8 @@ static const char *r2_js =
 	"};\n"
 ;
 static const char *require_js =
+	"function inspect(x) { try { var o = JSON.parse(x); } catch (e) { o = x; }\nreturn JSON.stringify(o,null, 2); }\n"
+	"var exports = {}\n"
 	"function require(name) {\n"
 	"var cache = require.cache;\n"
 	"if (name in cache) return cache[name];\n"
