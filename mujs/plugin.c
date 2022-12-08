@@ -67,7 +67,6 @@ static void *init(RLangSession *s) {
 	js_newcfunction(J, jsB_gc, "gc", 0);
 	js_setglobal(J, "gc");
 
-
 	MujsContext *ctx = R_NEW0 (MujsContext);
 	if (ctx) {
 		ctx->s = s;
