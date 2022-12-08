@@ -7,7 +7,7 @@
 
 static R_TH_LOCAL RCore *Gcore = NULL;
 
-SCM r2cmd_wrapper (SCM x) {
+static SCM r2cmd_wrapper(SCM x) {
 	size_t len = 0;
 	char *cmd = scm_to_utf8_stringn (x, &len);
 	char *res = r_core_cmd_str (Gcore, cmd);
@@ -40,6 +40,7 @@ static void *init(RLangSession *s) {
 
 static RLangPlugin r_lang_plugin_guile = {
 	.name = "guile",
+	.license = "LGPL",
 	.ext = "scm",
 	.desc = "GUILE",
 	.init = (void*)init,

@@ -178,6 +178,7 @@ static void *init(RLangSession *s) {
 static RLangPlugin r_lang_plugin_lua = {
 	.name = "lua",
 	.ext = "lua",
+	.license = "LUA",
 	.desc = "LUA 5.4.4 language extension",
 	.run = lua_run,
 	.init = init,
