@@ -103,6 +103,7 @@ static void *init(RLangSession *s) {
 static RLangPlugin r_lang_plugin_mujs = {
 	.name = "mujs",
 	.ext = "mujs",
+	.license = "MIT",
 	.desc = "Ghostscripts mujs interpreter (ES5)",
 	.run = mujs_run,
 	.init = init,
