@@ -2,9 +2,11 @@
 
 #include "core.h"
 
+// XXX this is a global and it should die
 RCore *core = NULL;
 
 /* TODO : move into a struct stored in the plugin struct */
+// XXX this is a global and it should die
 static void *py_core_call_cb = NULL;
 
 static int py_core_call(void *user, const char *str) {

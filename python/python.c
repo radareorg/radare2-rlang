@@ -1,6 +1,7 @@
-/* radare2 - LGPL - Copyright 2009-2022 - pancake */
+/* radare2 - LGPL - Copyright 2009-2023 - pancake */
 /* python extension for radare2's r_lang */
 
+#include <r_core.h>
 #include "python/common.h"
 #include "python/core.h"
 #include "python/io.h"
@@ -14,16 +15,22 @@ typedef struct {
 	PyObject* (*handler)(Radare*, PyObject*);
 } R2Plugins;
 
+
+static char *const py_nullstr = "";
+
 R2Plugins plugins[] = {
 	{ "core", &Radare_plugin_core },
+#if R2_VERSION_NUMBER < 50800
 	{ "asm", &Radare_plugin_asm },
+#endif
 	{ "anal", &Radare_plugin_anal },
 	{ "bin", &Radare_plugin_bin },
 	{ "io", &Radare_plugin_io },
 	{ NULL }
 };
 
-static bool run(RLang *lang, const char *code, int len) {
+static bool run(RLangSession *s, const char *code, int len) {
+	RLang *lang = s->lang;
 	core = (RCore *)lang->user;
 	PyRun_SimpleString (code);
 	return true;
@@ -39,11 +46,9 @@ static int slurp_python(const char *file) {
 	return false;
 }
 
-static bool run_file(struct r_lang_t *lang, const char *file) {
+static bool run_file(RLangSession *session, const char *file) {
 	return slurp_python (file);
 }
-
-static char *py_nullstr = "";
 
 static void Radare_dealloc(Radare* self) {
 	if (self) {
@@ -210,7 +215,9 @@ static PyObject *init_radare_module(void) {
 	}
 	RadareType.tp_dict = PyDict_New();
 	py_export_anal_enum(RadareType.tp_dict);
+#if R2_VERSION_NUMBER < 50800
 	py_export_asm_enum(RadareType.tp_dict);
+#endif
 	PyObject *m = PyModule_Create (&EmbModule);
 	if (!m) {
 		eprintf ("Cannot create python3 r2 module\n");
@@ -223,10 +230,14 @@ static PyObject *init_radare_module(void) {
 
 /* -init- */
 
-static bool init(RLang *user);
-static bool setup(RLang *user);
+static bool setup(RLangSession *user);
+#if R2_VERSION_NUMBER < 50800
+static bool init(RLang *lang);
+#else
+static void *init(RLangSession *lang);
+#endif
 
-static int prompt(void *user) {
+static bool prompt(RLangSession *s) {
 	return !PyRun_SimpleString (
 		"r2 = None\n"
 		"have_ipy = False\n"
@@ -246,7 +257,8 @@ static int prompt(void *user) {
 	);
 }
 
-static bool setup(RLang *lang) {
+static bool setup(RLangSession *s) {
+	RLang *lang = s->lang;
 	RListIter *iter;
 	RLangDef *def;
 	char cmd[128];
@@ -276,13 +288,18 @@ static bool setup(RLang *lang) {
 	return true;
 }
 
+#if R2_VERSION_NUMBER < 50800
 static bool init(RLang *lang) {
+#else
+static void *init(RLangSession *session) {
+#endif
+	RLang *lang = session->lang;
 	if (lang) {
 		core = lang->user;
 	}
 	// DO NOT INITIALIZE MODULE IF ALREADY INITIALIZED
 	if (Py_IsInitialized ()) {
-		return false;
+		return NULL;
 	}
 	PyImport_AppendInittab ("r2lang", init_radare_module);
 	PyImport_AppendInittab ("binfile", init_pybinfile_module);
@@ -291,10 +308,10 @@ static bool init(RLang *lang) {
 	PyObject *sys = PyImport_ImportModule ("sys");
 	PyObject *path = PyObject_GetAttrString (sys, "path");
 	PyList_Append (path, PyUnicode_FromString("."));
-	return true;
+	return sys;
 }
 
-static int fini(void *user) {
+static bool fini(RLangSession *user) {
 #if (PY_MAJOR_VERSION >= 3) && (PY_MINOR_VERSION >= 6)
 	return Py_FinalizeEx() ? false : true;
 #else

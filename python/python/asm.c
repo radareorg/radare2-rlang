@@ -1,7 +1,9 @@
-/* radare - LGPL - Copyright 2009-2019 - pancake */
+/* radare - LGPL - Copyright 2009-2023 - pancake */
 
 #include "asm.h"
 #include "core.h"
+
+#if R2_VERSION_NUMBER < 50800
 
 void py_export_asm_enum(PyObject *tp_dict) {
 
@@ -153,3 +155,4 @@ PyObject *Radare_plugin_asm(Radare* self, PyObject *args) {
 	r_lib_open_ptr (core->lib, "python.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }
+#endif
