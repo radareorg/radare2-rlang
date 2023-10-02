@@ -1,4 +1,4 @@
-import { R1Pipe, R2Api } from "./r2pipe";
+import { R2Pipe, R2Api } from "./r2papi";
 import { refsTest } from "./examples";
 
 enum Foo {
@@ -7,7 +7,7 @@ enum Foo {
 
 export function main(r2: R2Pipe) {
 	// testProgram(r2);
-	// newTestProgram(r1);
+	// newTestProgram(r2);
 	// refsTest(r2);
 	r2.log("Hello World");
 	const api = new R2Api(r2);

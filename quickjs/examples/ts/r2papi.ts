@@ -104,6 +104,7 @@ export interface Instruction {
 
 export interface R2Pipe {
 	cmd(cmd: string): string;
+	cmdj(cmd: string): any;
 	log(msg: string): string;
 }
 
@@ -232,3 +233,5 @@ export class NativePointer {
 		return this.api.cmdj("axtj@" + this.addr);
 	}
 }
+
+export declare var r2: R2Pipe;

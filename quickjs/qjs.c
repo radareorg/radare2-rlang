@@ -18,12 +18,13 @@
 #include "quickjs-bellard/quickjs.h"
 #endif
 
-// TODO: remove all those globals
-static R_TH_LOCAL JSContext *ctx = NULL;
-static R_TH_LOCAL JSRuntime *rt = NULL;
-static R_TH_LOCAL RCore *Gcore = NULL;
-static R_TH_LOCAL bool is_init = false;
+typedef struct {
+	JSContext *ctx;
+	JSRuntime *r;
+	RCore *Gcore;
+} QjsContext;
 
+static bool eval(JSContext *ctx, const char *code);
 static void js_dump_obj(JSContext *ctx, FILE *f, JSValueConst val) {
 	const char *str = JS_ToCString (ctx, val);
 	if (str) {
@@ -52,8 +53,8 @@ static void js_std_dump_error1(JSContext *ctx, JSValueConst exception_val) {
 	JSValue val;
 	bool is_error;
 
-	is_error = JS_IsError(ctx, exception_val);
-	js_dump_obj(ctx, stderr, exception_val);
+	is_error = JS_IsError (ctx, exception_val);
+	js_dump_obj (ctx, stderr, exception_val);
 	if (is_error) {
 		val = JS_GetPropertyStr (ctx, exception_val, "stack");
 		if (!JS_IsUndefined (val)) {
@@ -88,20 +89,84 @@ static JSValue r2error(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 }
 
 static JSValue r2cmd(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	JSRuntime *rt = JS_GetRuntime (ctx);
+	QjsContext *k = JS_GetRuntimeOpaque (rt);
 	size_t plen;
 	const char *n = JS_ToCStringLen2(ctx, &plen, argv[0], false);
-	char *ret = r_core_cmd_str (Gcore, n);
-	return JS_NewString (ctx, ret);
+	char *ret = r_core_cmd_str (k->Gcore, n);
+	return JS_NewString (ctx, r_str_get (ret));
+}
+
+static JSValue r2cmdj(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+	JSRuntime *rt = JS_GetRuntime (ctx);
+	QjsContext *k = JS_GetRuntimeOpaque (rt);
+	size_t plen;
+	const char *n = JS_ToCStringLen2(ctx, &plen, argv[0], false);
+	char *ret = r_core_cmd_str (k->Gcore, n);
+	JSValue ns = JS_NewString (ctx, r_str_get (ret));
+	return ns;
 }
 
 static const JSCFunctionListEntry js_r2_funcs[] = {
 	JS_CFUNC_DEF ("cmd", 1, r2cmd),
+	JS_CFUNC_DEF ("cmdj", 1, r2cmdj),
 	JS_CFUNC_DEF ("log", 1, r2log),
 	JS_CFUNC_DEF ("error", 1, r2error),
 };
 
 static int js_r2_init(JSContext *ctx, JSModuleDef *m) {
 	return JS_SetModuleExportList (ctx, m, js_r2_funcs, countof (js_r2_funcs));
+}
+
+static JSContext *JS_NewCustomContext(JSRuntime *rt);
+
+static JSValue js_print(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
+{
+    int i;
+    const char *str;
+    size_t len;
+
+    for(i = 0; i < argc; i++) {
+        if (i != 0)
+            putchar(' ');
+        str = JS_ToCStringLen(ctx, &len, argv[i]);
+        if (!str)
+            return JS_EXCEPTION;
+        fwrite(str, 1, len, stdout);
+        JS_FreeCString(ctx, str);
+    }
+    putchar('\n');
+    return JS_UNDEFINED;
+}
+static void register_helpers(JSContext *ctx) {
+// 	QjsContext *k = ls->plugin_data;
+#if QJS_LIBC
+	JSRuntime *rt = JS_GetRuntime (ctx);
+	js_std_set_worker_new_context_func (JS_NewCustomContext);
+	js_std_init_handlers (rt);
+
+	JS_SetModuleLoaderFunc (rt, NULL, js_module_loader, NULL);
+#endif
+	JSModuleDef *m = JS_NewCModule (ctx, "r2", js_r2_init);
+	if (!m) {
+		return ;
+	}
+	js_r2_init (ctx, m);
+	JS_AddModuleExportList (ctx, m, js_r2_funcs, countof (js_r2_funcs));
+	JSValue global_obj = JS_GetGlobalObject (ctx);
+	JS_SetPropertyStr (ctx, global_obj, "print",
+			JS_NewCFunction (ctx, js_print, "print", 1));
+	JS_SetPropertyStr (ctx, global_obj, "r2cmd",
+			JS_NewCFunction (ctx, r2cmd, "r2cmd", 1));
+#if 1
+	eval(ctx, "function dir(x){"
+			"console.log(JSON.stringify(x).replace(/,/g,',\\n '));"
+			"for(var i in x) {console.log(i);}}");
+	eval(ctx, "var console = { log:print, error:print, debug:print };");
+	eval(ctx, "var r2 = { cmd:r2cmd, cmdj:(x)=>JSON.parse(r2cmd(x))};");
+	eval(ctx, "var global = globalThis;");
+#endif
 }
 
 static JSContext *JS_NewCustomContext(JSRuntime *rt) {
@@ -112,17 +177,17 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 	}
 #ifdef CONFIG_BIGNUM
 	if (bignum_ext) {
-		JS_AddIntrinsicBigFloat(ctx);
-		JS_AddIntrinsicBigDecimal(ctx);
-		JS_AddIntrinsicOperators(ctx);
+		JS_AddIntrinsicBigFloat (ctx);
+		JS_AddIntrinsicBigDecimal (ctx);
+		JS_AddIntrinsicOperators (ctx);
 		JS_EnableBignumExt(ctx, TRUE);
 	}
 #endif
 #if QJS_LIBC
-	js_std_init_handlers(rt);
+	js_std_init_handlers (rt);
 	/* system modules */
-	js_init_module_os(ctx, "os");
-	js_init_module_std(ctx, "std");
+	js_init_module_os (ctx, "os");
+	js_init_module_std (ctx, "std");
 #if 0
 	// if load_std
 	const char *str = "import * as std from 'std';\n"
@@ -132,39 +197,12 @@ static JSContext *JS_NewCustomContext(JSRuntime *rt) {
 	eval_buf(ctx, str, strlen(str), "<input>", JS_EVAL_TYPE_MODULE);
 #endif
 #endif
+	register_helpers (ctx);
 	return ctx;
 }
 
-static void register_helpers(RLang *lang) {
-	// TODO: move this code to init/fini
-	if (ctx || is_init) {
-	//	return;
-	}
-	is_init = true;
-	Gcore = lang->user;
-	rt = JS_NewRuntime ();
-#if QJS_LIBC
-	js_std_set_worker_new_context_func (JS_NewCustomContext);
-	js_std_init_handlers (rt);
-	ctx = JS_NewCustomContext (rt);
-	JS_SetModuleLoaderFunc(rt, NULL, js_module_loader, NULL);
-#else
-	ctx = JS_NewCustomContext (rt);
-#endif
-	JSModuleDef *m = JS_NewCModule (ctx, "r2", js_r2_init);
-	if (!m) {
-		return ;
-	}
-	js_r2_init (ctx, m);
-	JS_AddModuleExportList (ctx, m, js_r2_funcs, countof (js_r2_funcs));
-#if 0
-	eval(ctx, "function dir(x){"
-			"console.log(JSON.stringify(x).replace(/,/g,',\\n '));"
-			"for(var i in x) {console.log(i);}}");
-#endif
-}
-
 static void eval_jobs(JSContext *ctx) {
+	JSRuntime *rt = JS_GetRuntime (ctx);
 	JSContext * pctx = NULL;
 	do {
 		int res = JS_ExecutePendingJob (rt, &pctx);
@@ -187,19 +225,42 @@ static bool eval(JSContext *ctx, const char *code) {
 }
 
 static bool lang_quickjs_run(RLangSession *s, const char *code, int len) {
-	register_helpers (s->lang);
-	return eval (ctx, code);
+	QjsContext *k = s->plugin_data;
+	return eval (k->ctx, code);
 }
 
-static int lang_quickjs_file(RLang *lang, const char *file) {
-	int rc = -1;
-	register_helpers (lang);
+static bool lang_quickjs_file(RLangSession *s, const char *file) {
+	QjsContext *k = s->plugin_data;
+	bool rc = false;
 	char *code = r_file_slurp (file, NULL); 
 	if (code) {
-		rc = eval (ctx, code);
+		rc = eval (k->ctx, code) == 0;
 		free (code);
 	}
 	return rc;
+}
+
+static void *init(RLangSession *s) {
+	QjsContext *k = R_NEW0 (QjsContext);
+	if (k) {
+		JSRuntime *rt = JS_NewRuntime ();
+		JS_SetRuntimeOpaque (rt, k);
+		k->r = rt;
+		k->ctx = JS_NewCustomContext (rt);
+		register_helpers (k->ctx);
+		k->Gcore = s->lang->user;
+	}
+	s->plugin_data = k; // implicit
+	return k;
+}
+
+static bool fini(RLangSession *s) {
+	QjsContext *k = s->plugin_data;
+	JS_FreeContext (k->ctx);
+	JS_FreeRuntime (k->r);
+	free (k);
+	s->plugin_data = NULL;
+	return NULL;
 }
 
 static RLangPlugin r_lang_plugin_quickjs = {
@@ -208,7 +269,9 @@ static RLangPlugin r_lang_plugin_quickjs = {
 	.license = "MIT",
 	.desc = "JavaScript extension language using QuicKJS",
 	.run = lang_quickjs_run,
-	.run_file = (void*)lang_quickjs_file,
+	.run_file = lang_quickjs_file,
+	.init = init,
+	.fini = fini,
 };
 
 #if !CORELIB

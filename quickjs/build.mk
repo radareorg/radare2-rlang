@@ -3,7 +3,7 @@ QJS_BRANCH=frida
 VERSION=0.1
 
 LINK_QJS_FILES=1
-QJS_LIBC=1
+QJS_LIBC=0
 ifeq ($(LINK_QJS_FILES),1)
 QJS_FILES+=quickjs-$(QJS_BRANCH)/quickjs.c
 QJS_FILES+=quickjs-$(QJS_BRANCH)/cutils.c
@@ -40,7 +40,7 @@ QJS_LIBS+=-lr_core -lr_config -lr_cons
 lang_qjs.${EXT_SO}: $(QJS_NAME)
 	# $(MAKE) CFLAGS_OPT="-Oz -DCONFIG_VERSION=\\\"0.1\\\"" -C $(QJS_NAME) libquickjs.a
 #-Wl,-exported_symbols_list,symbols.lst
-	-$(CC) -flto -D 'CONFIG_VERSION="$(VERSION)"' -Os -Wl,-dead_strip -std=c99 $(DUK_CFLAGS) -I quickjs $(QJS_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
+	-$(CC) -flto -D 'CONFIG_VERSION="$(VERSION)"' -g -Oz -Wl,-dead_strip -std=c99 $(DUK_CFLAGS) -I quickjs $(QJS_CFLAGS) $(CFLAGS) -fPIC $(LDFLAGS_LIB) \
 		-o lang_qjs.$(EXT_SO) $(QJS_FILES) $(QJS_LIBS) qjs.c
 
 $(QJS_NAME):

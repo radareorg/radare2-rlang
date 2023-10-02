@@ -1,6 +1,6 @@
 
 // main
-import { R2Pipe, R2Api, NativePointer, SearchResult } from "./r2pipe";
+import { R2Pipe, R2Api, NativePointer, SearchResult } from "./r2papi";
 
 function firstString(api: R2Api) : NativePointer {
 	return api.ptr(api.r2.cmd("f,name/str/str.,addr/cols/name,name/head/1,:quiet"))
