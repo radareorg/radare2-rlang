@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2009-2021 - pancake */
+/* radare - LGPL - Copyright 2009-2023 - pancake */
 
 #include "io.h"
 #include "core.h"
@@ -153,14 +153,19 @@ static bool py_io_close(RIODesc *desc) {
 }
 
 void Radare_plugin_io_free(RIOPlugin *ap) {
+#if R2_VERSION_NUMBER > 50808
+	free ((char *)ap->meta.name);
+	free ((char *)ap->meta.desc);
+	free ((char *)ap->meta.license);
+#else
 	free ((char *)ap->name);
 	free ((char *)ap->desc);
 	free ((char *)ap->license);
+#endif
 	free (ap);
 }
 
 PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
-	void *ptr = NULL;
 	PyObject *arglist = Py_BuildValue("(i)", 0);
 	PyObject *o = PyObject_CallObject (args, arglist);
 
@@ -169,11 +174,24 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 		return Py_False;
 	}
 	py_io_plugin = ap;
+#if R2_VERSION_NUMBER > 50808
+	RPluginMeta meta = {
+		.name = getS (o, "name"),
+		.desc = getS (o, "desc"),
+		.license = getS (o, "license")
+	};
+	memcpy ((void*)&ap->meta, &meta, sizeof(RPluginMeta));
+#if 0
+	ap->meta.name = getS (o, "name");
+	ap->meta.desc = getS (o, "desc");
+	ap->meta.license = getS (o, "license");
+#endif
+#else
 	ap->name = getS (o, "name");
 	ap->desc = getS (o, "desc");
 	ap->license = getS (o, "license");
-
-	ptr = getF (o, "open");
+#endif
+	void *ptr = getF (o, "open");
 	if (ptr) {
 		Py_INCREF (ptr);
 		py_io_open_cb = (void *)ptr;

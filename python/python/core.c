@@ -1,13 +1,13 @@
-/* radare - LGPL - Copyright 2016-2019 - pancake */
+/* radare - LGPL - Copyright 2016-2023 - pancake */
 
 #include "core.h"
 
 // XXX this is a global and it should die
-RCore *core = NULL;
+R_TH_LOCAL RCore *core = NULL;
 
 /* TODO : move into a struct stored in the plugin struct */
 // XXX this is a global and it should die
-static void *py_core_call_cb = NULL;
+static R_TH_LOCAL void *py_core_call_cb = NULL;
 
 static int py_core_call(void *user, const char *str) {
 	if (py_core_call_cb) {
@@ -47,22 +47,41 @@ static int py_core_call(void *user, const char *str) {
 }
 
 void Radare_plugin_core_free(RCorePlugin *ap) {
-	free ((char *)ap->name);
-	free ((char *)ap->license);
-	free ((char *)ap->desc);
-	free (ap);
+	if (ap) {
+#if R2_VERSION_NUMBER > 50808
+		free ((char *)ap->meta.name);
+		free ((char *)ap->meta.license);
+		free ((char *)ap->meta.desc);
+#else
+		free ((char *)ap->name);
+		free ((char *)ap->license);
+		free ((char *)ap->desc);
+#endif
+		free (ap);
+	}
 }
 
 PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
-	void *ptr = NULL;
 	PyObject *arglist = Py_BuildValue("(i)", 0);
 	PyObject *o = PyObject_CallObject (args, arglist);
 
 	RCorePlugin *ap = R_NEW0 (RCorePlugin);
+	if (!ap) {
+		return NULL;
+	}
+#if R2_VERSION_NUMBER > 50808
+	RPluginMeta meta = {
+		.name = getS (o, "name"),
+		.license = getS (o, "license"),
+		.desc = getS (o, "desc")
+	};
+	memcpy ((RPluginMeta *)&ap->meta, &meta, sizeof (RPluginMeta));
+#else
 	ap->name = getS (o, "name");
 	ap->license = getS (o, "license");
 	ap->desc = getS (o, "desc");
-	ptr = getF (o, "call");
+#endif
+	void *ptr = getF (o, "call");
 	if (ptr) {
 		Py_INCREF (ptr);
 		py_core_call_cb = ptr;

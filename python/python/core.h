@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2017-2019 - pancake, xvilka, aronsky */
+/* radare - LGPL - Copyright 2017-2023 - pancake, xvilka, aronsky */
 
 #ifndef _PY_CORE_H
 #define _PY_CORE_H
@@ -6,7 +6,7 @@
 #include <r_core.h>
 #include "common.h"
 
-extern RCore *core;
+extern R_TH_LOCAL RCore *core;
 
 void Radare_plugin_core_free(RCorePlugin *ap);
 

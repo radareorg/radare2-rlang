@@ -5,9 +5,12 @@
 #include "python/common.h"
 #include "python/core.h"
 #include "python/io.h"
-#include "python/asm.h"
+#if R2_VERSION_NUMBER < 50809
 #include "python/anal.h"
+#include "python/asm.h"
 #include "python/bin.h"
+#endif
+
 #define PLUGIN_NAME r_lang_plugin_python
 
 typedef struct {
@@ -15,16 +18,17 @@ typedef struct {
 	PyObject* (*handler)(Radare*, PyObject*);
 } R2Plugins;
 
+static const char *const py_nullstr = "";
 
-static char *const py_nullstr = "";
-
-R2Plugins plugins[] = {
+static const R2Plugins plugins[] = {
 	{ "core", &Radare_plugin_core },
 #if R2_VERSION_NUMBER < 50800
 	{ "asm", &Radare_plugin_asm },
 #endif
+#if R2_VERSION_NUMBER < 50809
 	{ "anal", &Radare_plugin_anal },
 	{ "bin", &Radare_plugin_bin },
+#endif
 	{ "io", &Radare_plugin_io },
 	{ NULL }
 };
@@ -59,7 +63,7 @@ static void Radare_dealloc(Radare* self) {
 			Py_XDECREF (self->last);
 		}
 	}
-	//self->ob_type->tp_free((PyObject*)self);
+	// self->ob_type->tp_free((PyObject*)self);
 }
 
 static PyObject * Radare_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
@@ -97,7 +101,7 @@ static PyObject *Radare_plugin(Radare* self, PyObject *args) {
 			return plugins[i].handler (self, cb);
 		}
 	}
-	eprintf ("TODO: r2lang.plugin does not supports '%s' plugins yet\n", type);
+	R_LOG_INFO ("TODO: r2lang.plugin does not supports '%s' plugins yet", type);
 	return Py_False;
 }
 
@@ -149,7 +153,7 @@ static PyMethodDef Radare_methods[] = {
 };
 
 static PyTypeObject RadareType = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT (NULL, 0)
 	"radare.RadareInternal",   /*tp_name*/
 	sizeof (Radare),           /*tp_basicsize*/
 	0,                         /*tp_itemsize*/
@@ -213,29 +217,26 @@ static PyObject *init_radare_module(void) {
 	if (PyType_Ready (&RadareType) < 0) {
 		return NULL;
 	}
-	RadareType.tp_dict = PyDict_New();
-	py_export_anal_enum(RadareType.tp_dict);
+	RadareType.tp_dict = PyDict_New ();
+#if R2_VERSION_NUMBER < 50809
+	py_export_anal_enum (RadareType.tp_dict);
+#endif
 #if R2_VERSION_NUMBER < 50800
-	py_export_asm_enum(RadareType.tp_dict);
+	py_export_asm_enum (RadareType.tp_dict);
 #endif
 	PyObject *m = PyModule_Create (&EmbModule);
 	if (!m) {
-		eprintf ("Cannot create python3 r2 module\n");
+		R_LOG_ERROR ("Cannot create python3 r2 module");
 		return NULL;
 	}
-	Py_INCREF(&RadareType);
-	PyModule_AddObject(m, "R", (PyObject *)&RadareType);
+	Py_INCREF (&RadareType);
+	PyModule_AddObject (m, "R", (PyObject *)&RadareType);
 	return m;
 }
 
 /* -init- */
 
 static bool setup(RLangSession *user);
-#if R2_VERSION_NUMBER < 50800
-static bool init(RLang *lang);
-#else
-static void *init(RLangSession *lang);
-#endif
 
 static bool prompt(RLangSession *s) {
 	return !PyRun_SimpleString (
@@ -288,12 +289,18 @@ static bool setup(RLangSession *s) {
 	return true;
 }
 
-#if R2_VERSION_NUMBER < 50800
+#if R2_VERSION_NUMBER > 50808
+static bool init(RLangSession *session) {
+	if (session == NULL) {
+		return true;
+	}
+	RLang *lang = session->lang;
+#elif R2_VERSION_NUMBER < 50800
 static bool init(RLang *lang) {
 #else
 static void *init(RLangSession *session) {
-#endif
 	RLang *lang = session->lang;
+#endif
 	if (lang) {
 		core = lang->user;
 	}
@@ -302,20 +309,27 @@ static void *init(RLangSession *session) {
 		return NULL;
 	}
 	PyImport_AppendInittab ("r2lang", init_radare_module);
+#if R2_VERSION_NUMBER < 50809
 	PyImport_AppendInittab ("binfile", init_pybinfile_module);
+#endif
 	Py_Initialize ();
 	// Add a current directory to the PYTHONPATH
 	PyObject *sys = PyImport_ImportModule ("sys");
 	PyObject *path = PyObject_GetAttrString (sys, "path");
 	PyList_Append (path, PyUnicode_FromString("."));
+#if R2_VERSION_NUMBER < 50809
 	return sys;
+#else
+	session->plugin_data = sys;
+	return true;
+#endif
 }
 
 static bool fini(RLangSession *user) {
 #if (PY_MAJOR_VERSION >= 3) && (PY_MINOR_VERSION >= 6)
-	return Py_FinalizeEx() ? false : true;
+	return Py_FinalizeEx () ? false : true;
 #else
-	Py_Finalize();
+	Py_Finalize ();
 	return true;
 #endif
 }
@@ -325,11 +339,19 @@ static const char *help =
 	"  print r2.cmd(\"p8 10\");\n";
 
 RLangPlugin PLUGIN_NAME = {
+#if R2_VERSION_NUMBER > 50808
+	.meta = {
+		.name = "python",
+		.desc = "Python language extension",
+		.license = "LGPL",
+	},
+#else
 	.name = "python",
-	.alias = "python",
-	.ext = "py",
 	.desc = "Python language extension",
 	.license = "LGPL",
+#endif
+	.alias = "python",
+	.ext = "py",
 	.init = &init,
 	.setup = &setup,
 	.fini = (void *)&fini,
