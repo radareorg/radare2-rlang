@@ -57,7 +57,7 @@ static bool fini(RLangSession *s) {
 	MujsContext *ctx = s->plugin_data;
 	js_freestate (ctx->J);
 	s->plugin_data = NULL;
-	return NULL;
+	return true;
 }
 
 static void *init(RLangSession *s) {
