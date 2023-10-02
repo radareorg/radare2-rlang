@@ -1,10 +1,11 @@
 # Example Python Core plugin written in Python
 # ===========================================
-#  -- pancake 2016
+#  -- pancake 2016-2023
 #
-# $ r2 -I test-py-core.py -
+# $ r2 -i test-py-core.py -
 # > q
-# Dont be rude
+# .. hexdump ..
+# Dont be rude. Use q!
 # > ^D
 # $
 
@@ -13,14 +14,18 @@ import r2lang
 def pycore(a):
 	def _call(s):
 		if s == "q":
-			print("Dont be rude")
-			return 1;
-		return 0
+			try:
+				print(r2lang.cmd("x"))
+			except:
+				print("ERR")
+			print("Dont be rude. Use q!")
+			return True;
+		return False
 
 	return {
-		"name": "PyCore",
-		"license": "GPL",
-		"desc": "core plugin in python",
+		"name": "pycoretest",
+		"license": "MIT",
+		"desc": "example core plugin written in python",
 		"call": _call,
 	}
 
