@@ -105,12 +105,21 @@ static PyObject *Radare_plugin(Radare* self, PyObject *args) {
 	return Py_False;
 }
 
+static PyObject *Radare_print(Radare* self, PyObject *args) {
+	char *cmd = NULL;
+	if (!PyArg_ParseTuple (args, "s", &cmd)) {
+		return Py_False;
+	}
+	r_cons_printf ("%s\n", cmd);
+	return Py_True;
+}
+
 static PyObject *Radare_cmd(Radare* self, PyObject *args) {
-	char *str, *cmd = NULL;
+	char *cmd = NULL;
 	if (!PyArg_ParseTuple (args, "s", &cmd)) {
 		return NULL;
 	}
-	str = r_core_cmd_str (core, cmd);
+	char *str = r_core_cmd_str (core, cmd);
 	return PyUnicode_FromString (str? str: py_nullstr);
 }
 
@@ -145,6 +154,8 @@ static PyMemberDef Radare_members[] = {
 };
 
 static PyMethodDef Radare_methods[] = {
+	{"print", (PyCFunction)Radare_print, METH_VARARGS,
+		"Print text using RCons api, so the output can be captured by radare2" },
 	{"cmd", (PyCFunction)Radare_cmd, METH_VARARGS,
 		"Executes a radare command and returns a string" },
 	{"plugin", (PyCFunction)Radare_plugin, METH_VARARGS,
