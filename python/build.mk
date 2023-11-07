@@ -13,14 +13,16 @@ PYLDFLAGS+=$(shell PYVER=3 ./python-config-wrapper --ldflags)
 PYLDFLAGS+=${LDFLAGS_LIB}
 
 CFLAGS+=-g
+CFLAGS+=$(PYCFLAGS)
 CFILES=python.c
 ifeq ($(shell pkg-config --max-version 5.8.8 r_core && echo 1),1)
 CFILES+=anal.c asm.c bin.c
 endif
 CFILES+=python/common.c python/core.c python/io.c
+OFILES=$(subst .c,.o,${CFILES})
 
-lang_python.$(EXT_SO):
-	${CC} $(CFILES) ${CFLAGS} ${PYCFLAGS} ${PYLDFLAGS} \
+lang_python.$(EXT_SO): $(OFILES)
+	${CC} $(CFILES) ${CFLAGS} ${PYLDFLAGS} \
 	$(shell PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" pkg-config --cflags --libs r_reg r_core r_cons) \
 	${LDFLAGS} ${LDFLAGS_LIB} -fPIC -o lang_python.$(EXT_SO)
 endif

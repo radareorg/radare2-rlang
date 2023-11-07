@@ -273,7 +273,6 @@ static bool setup(RLangSession *s) {
 	RLang *lang = s->lang;
 	RListIter *iter;
 	RLangDef *def;
-	char cmd[128];
 	// Segfault if already initialized ?
 	PyRun_SimpleString (
 		"try:\n"
@@ -286,16 +285,19 @@ static bool setup(RLangSession *s) {
 		if (!def->type || !def->name) {
 			continue;
 		}
-		if (!strcmp (def->type, "int"))
-			snprintf (cmd, sizeof (cmd), "%s=%d", def->name, (int)(size_t)def->value);
-		else if (!strcmp (def->type, "string"))
-			snprintf (cmd, sizeof (cmd), "%s=\"%s\"", def->name, (char *)def->value);
-		else snprintf (cmd, sizeof (cmd),
-			"try:\n"
+		char *cmd = NULL;
+		if (!strcmp (def->type, "int")) {
+			cmd = r_str_newf ("%s=%d", def->name, (int)(size_t)def->value);
+		} else if (!strcmp (def->type, "string")) {
+			cmd = r_str_newf ("%s=\"%s\"", def->name, (char *)def->value);
+		} else {
+			cmd = r_str_newf ("try:\n"
 			"	%s=%s.ncast(%p)\n"
 			"except:\n"
 			"	pass", def->name, def->type, def->value);
+		}
 		PyRun_SimpleString (cmd);
+		free (cmd);
 	}
 	return true;
 }

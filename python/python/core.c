@@ -2,43 +2,24 @@
 
 #include "core.h"
 
-// XXX this is a global and it should die
+// TODO: XXX remove globals
 R_TH_LOCAL RCore *core = NULL;
-
-/* TODO : move into a struct stored in the plugin struct */
-// XXX this is a global and it should die
 static R_TH_LOCAL void *py_core_call_cb = NULL;
 
 static int py_core_call(void *user, const char *str) {
-	if (py_core_call_cb) {
-		PyObject *arglist = Py_BuildValue ("(z)", str);
-		PyObject *result = PyObject_CallObject (py_core_call_cb, arglist);
-		const char * str_res = NULL;
-		if (result) {
-			if (PyLong_Check (result)) {
-				return (int)PyLong_AsLong (result);
-			} else if (PyLong_Check (result)) {
-				return (int)PyLong_AsLong (result);
-			} else if (PyUnicode_Check (result)) {
-				int n = PyUnicode_KIND (result);
-				switch (n) {
-				case 1:
-					str_res = (char*)PyUnicode_1BYTE_DATA (result);
-					break;
-				case 2:
-					str_res = (char*)PyUnicode_2BYTE_DATA (result);
-					break;
-				case 4:
-				default:
-					str_res = (char*)PyUnicode_4BYTE_DATA (result);
-					break;
-				}
-			} else
-			if (PyUnicode_Check (result)) {
-				str_res = PyBytes_AS_STRING (result);
-			}
-			if (str_res) {
-				r_cons_print (str_res);
+	if (py_core_call_cb == NULL) {
+		return 0;
+	}
+	PyObject *arglist = Py_BuildValue ("(z)", str);
+	PyObject *result = PyObject_CallObject (py_core_call_cb, arglist);
+	if (result) {
+		if (PyLong_Check (result)) {
+			return (int)PyLong_AsLong (result);
+		}
+		if (PyUnicode_Check (result)) {
+			const char *res = PyBytes_AS_STRING (result);
+			if (res != NULL) {
+				r_cons_print (res);
 				return 1;
 			}
 		}
@@ -62,8 +43,11 @@ void Radare_plugin_core_free(RCorePlugin *ap) {
 }
 
 PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
-	PyObject *arglist = Py_BuildValue("(i)", 0);
+	PyObject *arglist = Py_BuildValue ("(i)", 0);
 	PyObject *o = PyObject_CallObject (args, arglist);
+	if (o == NULL) {
+		return NULL;
+	}
 
 	RCorePlugin *ap = R_NEW0 (RCorePlugin);
 	if (!ap) {
@@ -88,11 +72,13 @@ PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 		ap->call = py_core_call;
 	}
 	Py_DECREF (o);
+	Py_DECREF (arglist);
 
-	RLibStruct lp = {};
-	lp.type = R_LIB_TYPE_CORE;
-	lp.data = ap;
-	lp.free = (void (*)(void *data))Radare_plugin_core_free;
-	r_lib_open_ptr (core->lib, "python.py", NULL, &lp);
+	RLibStruct lp = {
+		.type = R_LIB_TYPE_CORE,
+		.data = ap,
+		.free = (void (*)(void *data))Radare_plugin_core_free
+	};
+	r_lib_open_ptr (core->lib, "python-r_core.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }
