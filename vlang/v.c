@@ -178,15 +178,17 @@ static bool lang_v_file(RLang *lang, const char *file) {
 	return 0;
 }
 
-static bool lang_v_run(RLang *lang, const char *code, int len) {
-	return __run (lang, code, len);
+static bool lang_v_run(RLangSession *s, const char *code, int len) {
+	return __run (s->lang, code, len);
 }
 
 static RLangPlugin r_lang_plugin_v = {
-	.name = "v",
+	.meta = {
+		.name = "v",
+		.license = "LGPL",
+		.desc = "V language extension",
+	},
 	.ext = "v",
-	.desc = "V language extension",
-	.license = "LGPL",
 	.run = lang_v_run,
 	.run_file = (void*)lang_v_file,
 };
