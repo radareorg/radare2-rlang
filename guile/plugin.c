@@ -1,4 +1,4 @@
-/* lang.guile plugin for r2 - 2022 - pancake */
+/* lang.guile plugin for r2 - 2022-2023 - pancake */
 
 #include <r_lib.h>
 #include <r_core.h>
@@ -29,20 +29,26 @@ static int runfile(RLangSession *s, const char *file) {
 	return 0;
 }
 
-static void *init(RLangSession *s) {
+static bool init(RLangSession *s) {
+	if (s == NULL) {
+		return true;
+	}
 	int argc = 0;
 	Gcore = s->lang->user;
 	char **argv = NULL;
 	scm_init_guile ();
 	scm_c_define_gsubr ("r2cmd", 1, 0, 0, r2cmd_wrapper);
-	return NULL;
+	return true;;
 }
 
 static RLangPlugin r_lang_plugin_guile = {
-	.name = "guile",
-	.license = "LGPL",
+	.meta = {
+		.name = "guile",
+		.license = "LGPL",
+		.desc = "GUILE",
+		.author = "pancake"
+	},
 	.ext = "scm",
-	.desc = "GUILE",
 	.init = (void*)init,
 	.run = runstr,
 	.run_file = (void*)runfile,
