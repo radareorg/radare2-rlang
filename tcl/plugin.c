@@ -27,23 +27,6 @@ static bool runstr(RLangSession *s, const char *code, int len) {
 	}
 	return false;
 }
-
-// should be bool
-static bool runfile(RLangSession *s, const char *file) {
-	char *data = r_file_slurp (file, NULL);
-	if (data) {
-		char *line = r_str_newf ("source %s", file);
-		if (Tcl_Eval (interp, line) == TCL_ERROR) {
-			free (line);
-			R_LOG_ERROR ("Failed to eval");
-			return false;
-		}
-		free (line);
-		free (data);
-	}
-	return true;
-}
-
 static bool init(RLangSession *s) {
 	if (s == NULL) {
 		return true;
@@ -61,7 +44,28 @@ static bool init(RLangSession *s) {
 }
 
 static bool fini(RLangSession *s) {
-	Tcl_DeleteInterp(interp);
+	Tcl_DeleteInterp (interp);
+	interp = NULL;
+	return true;
+}
+
+
+// should be bool
+static bool runfile(RLangSession *s, const char *file) {
+	char *data = r_file_slurp (file, NULL);
+	if (data) {
+		char *line = r_str_newf ("source %s", file);
+		if (Tcl_Eval (interp, line) == TCL_ERROR) {
+			free (line);
+			R_LOG_ERROR ("Failed to eval");
+			return false;
+		}
+		free (line);
+		free (data);
+		// required to close the TK script properly..
+		fini (s);
+		init (s);
+	}
 	return true;
 }
 
