@@ -1,0 +1,53 @@
+--- 
+GENERATOR: 
+  PackageName: radare2
+  PackageDescription: "Package radare2 provides Go bindings for radare2."
+  PackageLicense: "LGPLv2"
+  FlagGroups:
+    - {name: LDFLAGS, flags: [-lr_core]}
+  SysIncludes:
+    - r_core.h
+
+PARSER:
+  Arch: arm
+  SourcesPaths:
+    - r_core.h
+  IncludePaths:
+    # NOTE: Replace these paths if you want to re-generate.
+    - ../../radare2/libr/include
+    - /usr/local/include/libr
+    - /usr/include/libr
+  Defines:
+    R2_GO: {}
+
+TRANSLATOR: 
+  ConstRules: 
+    defines: expand
+    enum: expand
+  PtrTips:
+    function:
+      - {target: ^r_*$, tips: [0,arr,size,ref]}
+  TypeTips:
+    type:
+      - {target: R*$, self: plain}
+    function:
+      - {target: ^r_$, self: plain}
+  Rules: 
+    global:
+      - {action: accept, from: "^R_API"}
+      - {action: replace, from: "^EGL"}
+    function:
+      - {action: accept, from: ^r_}
+      - {action: replace, from: ^r_}
+      - {action: ignore, from: ^_}
+    type:
+      - {action: replace, from: "_t$"}
+    const:
+      - {action: ignore, from: R2_DEFAULT_DISPLAY}
+      - {transform: lower}
+    private:
+      - {transform: unexport}
+    post-global:
+      - {action: doc, from: "^egl", to: "https://www.radare.org"}
+      - {transform: export}
+      - {load: snakecase}
