@@ -783,6 +783,7 @@ PyObject *Radare_plugin_bin(Radare* self, PyObject *args) {
 	lp.type = R_LIB_TYPE_BIN;
 	lp.data = bp;
 	lp.free = (void (*)(void *data))Radare_plugin_bin_free;
+	R_LOG_DEBUG ("PLUGIN[python] Loading bin: %s", meta.name);
 	r_lib_open_ptr (core->lib, "python.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }

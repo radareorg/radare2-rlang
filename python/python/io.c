@@ -237,6 +237,7 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	lp.type = R_LIB_TYPE_IO;
 	lp.data = ap;
 	lp.free = (void (*)(void *data))Radare_plugin_io_free;
+	R_LOG_DEBUG ("PLUGIN[python] Loading io: %s", meta.name);
 	r_lib_open_ptr (core->lib, "python.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }

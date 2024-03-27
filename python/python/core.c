@@ -79,6 +79,7 @@ PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 		.data = ap,
 		.free = (void (*)(void *data))Radare_plugin_core_free
 	};
+	R_LOG_DEBUG ("PLUGIN[python] Loading core: %s", meta.name);
 	r_lib_open_ptr (core->lib, "python-r_core.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }
