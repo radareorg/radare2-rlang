@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2009-2013 pancake<nopcode.org> */
+/* radare - LGPL - Copyright 2009-2024 pancake<nopcode.org> */
 /* ruby extension for libr (radare2) */
 
 #include "r_lib.h"
@@ -21,12 +21,12 @@ static VALUE radare_ruby_cmd(VALUE self, VALUE string) {
 	return rb_str_new2 (retstr);
 }
 
-static int run(void *user, const char *code, int len) {
-	int err, ret = R_TRUE;
+static bool run(RLangSession *user, const char *code, int len) {
+	int err, ret = true;
 	rb_eval_string_protect (code, &err);
 	if (err != 0) {
 		fprintf (stderr, "error %d handled\n", err);
-		ret = R_FALSE;
+		ret = false;
 	}
 	return ret;
 }
@@ -35,17 +35,17 @@ static int slurp_ruby(const char *file) {
 	if (r_file_exists (file)) {
 		rb_load_file (file);
 		ruby_exec ();
-		return R_TRUE;
+		return true;
 	}
 	eprintf ("lang_ruby: Cannot open '%s'\n", file);
-	return R_FALSE;
+	return false;
 }
 
-static int run_file(void *user, const char *file) {
+static int run_file(RLangSession *user, const char *file) {
 	return slurp_ruby (file);
 }
 
-static int init(void *user) {
+static bool init(RLangSession *user) {
 	VALUE rb_RadareCmd;
 
 	ruby_init ();
@@ -59,22 +59,22 @@ static int init(void *user) {
 
 	if (!slurp_ruby (RUBYAPI)) {
 		fprintf (stderr, "[ruby] error loading ruby api\n");
-		//return R_FALSE;
+		//return false;
 	}
-	return R_TRUE;
+	return true;
 }
 
-static int prompt(void *user) {
+static bool prompt(RLangSession *user) {
 	int err;
 	rb_eval_string_protect ("IRB.start();", &err);
 	if (err != 0)
-		return R_FALSE;
-	return R_TRUE;
+		return false;
+	return true;
 }
 
-static int fini(void *user) {
+static bool fini(RLangSession *user) {
 	ruby_finalize ();
-	return R_TRUE;
+	return true;
 }
 
 static const char *help =
@@ -83,9 +83,11 @@ static const char *help =
 	" bytes = $r.cmd(\"p8 10\");\n";
 
 static struct r_lang_plugin_t r_lang_plugin_ruby = {
-	.name = "ruby",
+	.meta = {
+		.name = "ruby",
+		.desc = "Ruby language extension",
+	},
 	.ext = "rb",
-	.desc = "Ruby language extension",
 	.init = &init,
 	.fini = &fini,
 	.help = &help,

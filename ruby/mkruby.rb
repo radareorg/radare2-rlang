@@ -6,10 +6,11 @@ rb_o = 'ruby.o'
 inc = '../../include'
 
 require 'mkmf'
-INCDIR = Config::CONFIG['rubylibdir'] + "/"+Config::CONFIG['arch']
-LIBDIR = Config::CONFIG['LIBRUBY_ARG_SHARED']
+# TODO. those Config::CONFIG things doesnt seems to work with latest ruby
+INCDIR = "" # Config::CONFIG['rubylibdir'] + "/"+Config::CONFIG['arch']
+LIBDIR = "" # Config::CONFIG['LIBRUBY_ARG_SHARED']
 #LIBS   = Config::CONFIG['LIBS'] -lpthread...
-LIBNAM = Config::CONFIG['RUBY_INSTALL_NAME']
+LIBNAM = "ruby" # Config::CONFIG['RUBY_INSTALL_NAME']
 #LDSHARED=compilername -shared..."
 
 if ARGV[0] != nil; rb_c  = ARGV[0] end
