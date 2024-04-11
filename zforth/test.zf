@@ -1,0 +1,4 @@
+." Testing r2 from Forth .. " nl
+
+." [*] running a command " nl
+s" ?E Hello world " r2cmd tell
