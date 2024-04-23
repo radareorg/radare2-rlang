@@ -18,7 +18,7 @@ CFILES=python.c
 ifeq ($(shell pkg-config --max-version 5.8.8 r_core && echo 1),1)
 CFILES+=anal.c asm.c bin.c
 endif
-CFILES+=python/common.c python/core.c python/io.c
+CFILES+=python/common.c python/core.c python/io.c python/arch.c
 OFILES=$(subst .c,.o,${CFILES})
 
 lang_python.$(EXT_SO): $(OFILES)
