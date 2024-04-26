@@ -5,31 +5,31 @@
 PyObject *getO(PyObject *o, const char *name) {
 	if (!o) return NULL;
 	PyObject *res = PyDict_GetItemString (o, name);
-	if (!res) return NULL;
+	if (!res || res == Py_None) return NULL;
 	return res;
 }
 
 char *getS(PyObject *o, const char *name) {
 	if (!o) return NULL;
 	PyObject *res = PyDict_GetItemString (o, name);
-	if (!res) return NULL;
+	if (!res || res == Py_None) return NULL;
 	return strdup (PyUnicode_AsUTF8 (res));
 }
 
 st64 getI(PyObject *o, const char *name) {
 	if (!o) return 0;
 	PyObject *res = PyDict_GetItemString (o, name);
-	if (!res) return 0;
+	if (!res || res == Py_None) return 0;
 	return (st64) PyNumber_AsSsize_t (res, NULL);
 }
 
 void *getF(PyObject *o, const char *name) {
-	if (!o) return NULL;
+	if (!o || o == Py_None) return NULL;
 	return PyDict_GetItemString (o, name);
 }
 
 bool getB(PyObject *o, const char *name) {
-	if (!o) return NULL;
+	if (!o || o == Py_None) return NULL;
 	if (PyObject_IsTrue(o)) return true;
 	return false;
 }

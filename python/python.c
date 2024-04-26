@@ -9,6 +9,8 @@
 #include "python/anal.h"
 #include "python/asm.h"
 #include "python/bin.h"
+#else
+#include "python/arch.h"
 #endif
 
 #define PLUGIN_NAME r_lang_plugin_python
@@ -28,6 +30,8 @@ static const R2Plugins plugins[] = {
 #if R2_VERSION_NUMBER < 50809
 	{ "anal", &Radare_plugin_anal },
 	{ "bin", &Radare_plugin_bin },
+#else
+	{ "arch", &Radare_plugin_arch },
 #endif
 	{ "io", &Radare_plugin_io },
 	{ NULL }
@@ -234,6 +238,9 @@ static PyObject *init_radare_module(void) {
 #endif
 #if R2_VERSION_NUMBER < 50800
 	py_export_asm_enum (RadareType.tp_dict);
+#endif
+#if R2_VERSION_NUMBER > 50808
+	py_export_arch_enum (RadareType.tp_dict);
 #endif
 	PyObject *m = PyModule_Create (&EmbModule);
 	if (!m) {
