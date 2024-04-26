@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2017-2019 - pancake, xvilka, aronsky */
+/* radare - LGPL - Copyright 2024 - astuder */
 
 #ifndef _PY_ARCH_H
 #define _PY_ARCH_H

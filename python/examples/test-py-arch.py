@@ -1,7 +1,7 @@
 # Example Python Arch plugin written in Python
 # ============================================
 #
-#  -- pancake @ nopcode.org
+#  -- astuder
 #
 # The r2lang.plugin function exposes a way to register new plugins
 # into the RCore instance. This API is only available from RLang.
@@ -25,23 +25,21 @@ def pyarch(a):
 		"gpr	pc	.32	28	0\n"
 
 	def info(query):
-		if query == R.R_ARCH_INFO_MINOP_SIZE:
-			return 1
-		if query == R.R_ARCH_INFO_MAXOP_SIZE:
-			return 2
-		if query == R.R_ARCH_INFO_INVOP_SIZE:  # invalid op size
-			return 1
-		if query == R.R_ARCH_INFO_CODE_ALIGN:
-			return 1
-		if query == R.R_ANAL_INFO_DATA_ALIGN:
-			return 1
-		if query == R.R_ANAL_INFO_DATA2_ALIGN:
-			return 2
-		if query == R.R_ANAL_INFO_DATA4_ALIGN:
-			return 4
-		if query == R.R_ANAL_INFO_DATA8_ALIGN:
-			return 8
-		return 0
+		arch_info = {
+			R.R_ARCH_INFO_MINOP_SIZE: 1,
+			R.R_ARCH_INFO_MAXOP_SIZE: 2,
+			R.R_ARCH_INFO_INVOP_SIZE: 1,  # invalid op size
+			R.R_ARCH_INFO_CODE_ALIGN: 1,
+			R.R_ARCH_INFO_DATA_ALIGN: 1,
+			R.R_ARCH_INFO_DATA2_ALIGN: 2,
+			R.R_ARCH_INFO_DATA4_ALIGN: 4,
+			R.R_ARCH_INFO_DATA8_ALIGN: 8
+		}
+		res = arch_info.get(query)
+		if res is None:
+			return 0
+		else:
+			return res
 
 	def decode(buf, pc):
 		ops = {
@@ -65,8 +63,19 @@ def pyarch(a):
 				"op": {
 					"mnemonic" : "fadd",
 					"type" : R.R_ANAL_OP_TYPE_ADD,
-					"cpu_family" : R.R_ANAL_OP_FAMILY_FPU,
+					"family" : R.R_ANAL_OP_FAMILY_FPU,
 					"cycles" : 2,
+				},
+				"size": 3
+			},
+			3: {
+				"op": {
+					"mnemonic" : "jne",
+					"type" : R.R_ANAL_OP_TYPE_CJMP,
+					"cycles" : 2,
+					"jump" : (buf[1] << 8) | buf[2],
+					"fail" : pc+3,
+					"eob" : True
 				},
 				"size": 3
 			}

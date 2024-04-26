@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2017-2022 - pancake, xvilka */
+/* radare - LGPL - Copyright 2024 - astuder */
 
 // Exporting the R_ARCH_* enum constants
 #include <r_reg.h>
@@ -190,7 +190,7 @@ static char *py_arch_regs(RArchSession *as) {
 			if (PyUnicode_Check (result)) {
 				const char* regs = PyUnicode_AsUTF8 (result);
 				if (regs) {
-					res = r_str_new(regs);
+					res = strdup(regs);
 				}
 			}
 			Py_DECREF (result);
@@ -231,7 +231,8 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 				if (len && dict) {
 					if (PyDict_Check (dict)) {
 						op->size = PyNumber_AsSsize_t (len, NULL);
-						op->mnemonic = r_str_new (getS (dict, "mnemonic"));
+						op->mnemonic = strdup (getS (dict, "mnemonic"));
+						op->family = (getI (dict, "family"));
 						op->cycles = (getI (dict, "cycles"));
 						op->type = (getI (dict, "type"));
 						op->jump = (getI (dict, "jump"));
@@ -310,7 +311,7 @@ RArchPlugin py_arch_plugin = {
 PyObject *Radare_plugin_arch(Radare* self, PyObject *args) {
 	PyObject *arglist = Py_BuildValue ("(i)", 0);
 	PyObject *o = PyObject_CallObject (args, arglist);
-	if (o == NULL) {
+	if (!o) {
 		return NULL;
 	}
 
