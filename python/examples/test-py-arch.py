@@ -3,9 +3,8 @@
 #
 #  -- astuder
 #
-# The r2lang.plugin function exposes a way to register new plugins
-# into the RCore instance. This API is only available from RLang.
-# You must call with with '#!python test.py' or 'r2 -i test.py ..'
+# To locad the plugin launch radare2 with 'r2 -i test-py-arch.py ..'
+# or run '#!python test-py-arch.py' on the radare2 console 
 
 import r2lang
 from r2lang import R
@@ -96,6 +95,7 @@ def pyarch(a):
 		"decode": decode,
 	}
 
+# The r2lang.plugin function register the plugin with radare2
 if not r2lang.plugin("arch", pyarch):
 	print("Failed to register the python arch plugin.")
 	
