@@ -2,6 +2,12 @@
 
 #include "common.h"
 
+bool contains(PyObject *o, const char *name) {
+	if (!o || !name) return false;	
+	PyObject *str = PyUnicode_FromString(name);
+	return (PyDict_Contains(o, str) == 1);
+}
+
 PyObject *getO(PyObject *o, const char *name) {
 	if (!o) return NULL;
 	PyObject *res = PyDict_GetItemString (o, name);
