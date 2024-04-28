@@ -243,7 +243,7 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 							op->cond = (getI (dict, "cond"));
 						if (contains (dict, "jump"))
 							op->jump = (getI (dict, "jump"));
-						if (contains (dict, "fails"))
+						if (contains (dict, "fail"))
 							op->fail = (getI (dict, "fail"));		
 						if (contains (dict, "eob"))
 							op->eob = (getB (dict, "eob"));
