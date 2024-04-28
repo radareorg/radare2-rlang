@@ -26,6 +26,8 @@ typedef struct {
 	int number;
 } Radare;
 
+bool contains(PyObject *o, const char *name);
+
 PyObject *getO(PyObject *o, const char *name);
 
 char *getS(PyObject *o, const char *name);

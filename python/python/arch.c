@@ -231,13 +231,28 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 				if (len && dict) {
 					if (PyDict_Check (dict)) {
 						op->size = PyNumber_AsSsize_t (len, NULL);
-						op->mnemonic = strdup (getS (dict, "mnemonic"));
-						op->family = (getI (dict, "family"));
-						op->cycles = (getI (dict, "cycles"));
-						op->type = (getI (dict, "type"));
-						op->jump = (getI (dict, "jump"));
-						op->fail = (getI (dict, "fail"));
-						op->eob = (getB (dict, "eob"));
+						if (contains (dict, "mnemonic"))
+							op->mnemonic = strdup (getS (dict, "mnemonic"));
+						if (contains (dict, "familiy"))
+							op->family = (getI (dict, "family"));
+						if (contains (dict, "cycles"))
+							op->cycles = (getI (dict, "cycles"));
+						if (contains (dict, "type"))
+							op->type = (getI (dict, "type"));
+						if (contains (dict, "cond"))
+							op->cond = (getI (dict, "cond"));
+						if (contains (dict, "jump"))
+							op->jump = (getI (dict, "jump"));
+						if (contains (dict, "fail"))
+							op->fail = (getI (dict, "fail"));		
+						if (contains (dict, "eob"))
+							op->eob = (getB (dict, "eob"));
+						if (contains (dict, "ptr"))
+							op->ptr = (getI (dict, "ptr"));
+						if (contains (dict, "ptrsize"))
+							op->ptrsize = (getI (dict, "ptrsize"));
+						if (contains (dict, "val"))
+							op->val = (getI (dict, "val"));
 						res = true;
 					}
 				}
