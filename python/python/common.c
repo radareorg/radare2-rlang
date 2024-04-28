@@ -4,8 +4,8 @@
 
 bool contains(PyObject *o, const char *name) {
 	if (!o || !name) return false;	
-	PyObject *str = PyUnicode_FromString(name);
-	return (PyDict_Contains(o, str) == 1);
+	PyObject *str = PyUnicode_FromString (name);
+	return (PyDict_Contains (o, str) == 1);
 }
 
 PyObject *getO(PyObject *o, const char *name) {
@@ -36,6 +36,6 @@ void *getF(PyObject *o, const char *name) {
 
 bool getB(PyObject *o, const char *name) {
 	if (!o || o == Py_None) return NULL;
-	if (PyObject_IsTrue(o)) return true;
+	if (PyObject_IsTrue (o)) return true;
 	return false;
 }
