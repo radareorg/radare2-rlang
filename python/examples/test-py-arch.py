@@ -52,20 +52,21 @@ def pyarch(a):
 			},
 			1: {
 				"op": {
-					"mnemonic" : "mov r{}, #0x{:02x}".format(buf[1], buf[2]),
-					"type" : R.R_ANAL_OP_TYPE_MOV,					
+					"mnemonic" : "mov r{}, 0x{:02x}".format(buf[1], buf[2]),
+					"type" : R.R_ANAL_OP_TYPE_MOV,
 					"cycles" : 2,
-					"val" : buf[2],
+					"ptr" : buf[2],
+					"direction" : R.R_ANAL_OP_DIR_READ,
 					},
 				"size": 3
 			},
 			2: {
 				"op": {
-					"mnemonic" : "fadd r{}, ${}".format(buf[1], buf[2]),
+					"mnemonic" : "fadd r{}, #0x{:02x}".format(buf[1], buf[2]),
 					"type" : R.R_ANAL_OP_TYPE_ADD,
 					"family" : R.R_ANAL_OP_FAMILY_FPU,
 					"cycles" : 2,
-					"ptr" : buf[2],
+					"val" : buf[2],
 				},
 				"size": 3
 			},

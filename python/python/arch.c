@@ -113,6 +113,23 @@ void py_export_arch_enum(PyObject *tp_dict) {
 	PYENUM(R_ANAL_OP_TYPE_SYNC);
 	PYENUM(R_ANAL_OP_TYPE_DEBUG);
 
+	// opcode prefix, see radare2/libr/include/r_anal/op.h for documentation
+	PYENUM(R_ANAL_OP_PREFIX_COND);
+	PYENUM(R_ANAL_OP_PREFIX_REP);
+	PYENUM(R_ANAL_OP_PREFIX_REPNE);
+	PYENUM(R_ANAL_OP_PREFIX_LOCK);
+	PYENUM(R_ANAL_OP_PREFIX_LIKELY);
+	PYENUM(R_ANAL_OP_PREFIX_UNLIKELY);
+
+	// opcode stack operation, see radare2/libr/include/r_anal/op.h for documentation
+	PYENUM(R_ANAL_STACK_NULL);
+	PYENUM(R_ANAL_STACK_NOP);
+	PYENUM(R_ANAL_STACK_INC);
+	PYENUM(R_ANAL_STACK_GET);
+	PYENUM(R_ANAL_STACK_SET);
+	PYENUM(R_ANAL_STACK_RESET);
+	PYENUM(R_ANAL_STACK_ALIGN);
+
 	// opcode condition, see radare2/libr/include/r_anal/op.h for documentation
 	PYENUM(R_ANAL_COND_AL);
 	PYENUM(R_ANAL_COND_EQ);
@@ -131,6 +148,12 @@ void py_export_arch_enum(PyObject *tp_dict) {
 	PYENUM(R_ANAL_COND_HI);
 	PYENUM(R_ANAL_COND_LS);
 
+	// opcode direction, see radare2/libr/include/r_anal/op.h for documentation
+	PYENUM(R_ANAL_OP_DIR_READ);
+	PYENUM(R_ANAL_OP_DIR_WRITE);
+	PYENUM(R_ANAL_OP_DIR_EXEC);
+	PYENUM(R_ANAL_OP_DIR_REF);
+
 	// opcode family, see radare2/libr/include/r_anal/op.h for documentation	
 	PYENUM(R_ANAL_OP_FAMILY_UNKNOWN);
 	PYENUM(R_ANAL_OP_FAMILY_CPU);
@@ -143,6 +166,18 @@ void py_export_arch_enum(PyObject *tp_dict) {
 	PYENUM(R_ANAL_OP_FAMILY_SECURITY);
 	PYENUM(R_ANAL_OP_FAMILY_IO);
 	PYENUM(R_ANAL_OP_FAMILY_SIMD);
+
+	// opcode family, see radare2/libr/include/r_anal/op.h for documentation
+	PYENUM(R_ANAL_DATATYPE_NULL);
+	PYENUM(R_ANAL_DATATYPE_ARRAY);
+	PYENUM(R_ANAL_DATATYPE_OBJECT);
+	PYENUM(R_ANAL_DATATYPE_STRING);
+	PYENUM(R_ANAL_DATATYPE_CLASS);
+	PYENUM(R_ANAL_DATATYPE_BOOLEAN);
+	PYENUM(R_ANAL_DATATYPE_INT16);
+	PYENUM(R_ANAL_DATATYPE_INT32);
+	PYENUM(R_ANAL_DATATYPE_INT64);
+	PYENUM(R_ANAL_DATATYPE_FLOAT);
 
 #undef PYENUM
 }
@@ -229,32 +264,87 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 				PyObject *len = PyList_GetItem (result, 0);
 				PyObject *dict = PyList_GetItem (result, 1);
 				if (len && dict) {
-					if (PyDict_Check (dict)) {
-						op->size = PyNumber_AsSsize_t (len, NULL);
-						if (contains (dict, "mnemonic"))
-							op->mnemonic = strdup (getS (dict, "mnemonic"));
-						if (contains (dict, "familiy"))
-							op->family = (getI (dict, "family"));
-						if (contains (dict, "cycles"))
-							op->cycles = (getI (dict, "cycles"));
-						if (contains (dict, "type"))
-							op->type = (getI (dict, "type"));
-						if (contains (dict, "cond"))
-							op->cond = (getI (dict, "cond"));
-						if (contains (dict, "jump"))
-							op->jump = (getI (dict, "jump"));
-						if (contains (dict, "fail"))
-							op->fail = (getI (dict, "fail"));		
-						if (contains (dict, "eob"))
-							op->eob = (getB (dict, "eob"));
-						if (contains (dict, "ptr"))
-							op->ptr = (getI (dict, "ptr"));
-						if (contains (dict, "ptrsize"))
-							op->ptrsize = (getI (dict, "ptrsize"));
-						if (contains (dict, "val"))
-							op->val = (getI (dict, "val"));
-						res = true;
+					op->size = PyNumber_AsSsize_t (len, NULL);
+					PyObject *key, *value;
+					Py_ssize_t pos = 0;
+					while (PyDict_Next (dict, &pos, &key, &value)) {
+						const char* key_str = PyUnicode_AsUTF8 (key);
+						int i = 0;
+						if (value == Py_None) {
+							R_LOG_WARN("Python arch plugin: field '%s' is None", key_str);
+						} else if (strcmp (key_str, "mnemonic") == 0) {
+							op->mnemonic = strdup (PyUnicode_AsUTF8 (value));
+						} else if (strcmp (key_str, "type") == 0) {
+							op->type = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "prefix") == 0) {
+							op->prefix = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "type2") == 0) {
+							op->type2 = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "stackop") == 0) {
+							op->stackop = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "cond") == 0) {
+							op->cond = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "nopcode") == 0) {
+							op->nopcode = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "cycles") == 0) {
+							op->cycles = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "failcycles") == 0) {
+							op->failcycles = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "family") == 0) {
+							op->family = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "id") == 0) {
+							op->id = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "eob") == 0) {
+							op->eob = PyObject_IsTrue (value);
+						} else if (strcmp (key_str, "sign") == 0) {
+							op->sign = PyObject_IsTrue (value);
+						} else if (strcmp (key_str, "delay") == 0) {
+							op->delay = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "jump") == 0) {
+							op->jump = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "fail") == 0) {
+							op->fail = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "direction") == 0) {
+							op->direction = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "ptr") == 0) {
+							op->ptr = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "val") == 0) {
+							op->val = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "ptrsize") == 0) {
+							op->ptrsize = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "stackptr") == 0) {
+							op->stackptr = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "refptr") == 0) {
+							op->refptr = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "esil") == 0) {
+							r_strbuf_init(&op->esil);
+							r_strbuf_set (&op->esil, PyUnicode_AsUTF8 (value));
+						} else if (strcmp (key_str, "opex") == 0) {
+							r_strbuf_init(&op->opex);
+							r_strbuf_set (&op->opex, PyUnicode_AsUTF8 (value));
+						} else if (strcmp (key_str, "reg") == 0) {
+							op->reg = strdup (PyUnicode_AsUTF8 (value));
+						} else if (strcmp (key_str, "ireg") == 0) {
+							op->ireg = strdup (PyUnicode_AsUTF8 (value));
+						} else if (strcmp (key_str, "scale") == 0) {
+							op->scale = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "disp") == 0) {
+							op->disp = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "datatype") == 0) {
+							op->datatype = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "vliw") == 0) {
+							op->vliw = PyNumber_AsSsize_t (value, NULL);
+						} else if (strcmp (key_str, "payload") == 0) {
+							op->payload = PyNumber_AsSsize_t (value, NULL);
+						} else {
+							R_LOG_WARN("Python arch plugin: unknown field '%s'", key_str);
+						}
+						if (PyErr_Occurred ()) {
+							R_LOG_WARN("Pyton arch plugin: field '%s' has wrong data type", key_str);
+							PyErr_Print ();
+						}
 					}
+					res = true;
 				}
 			}
 			Py_DECREF (result);
