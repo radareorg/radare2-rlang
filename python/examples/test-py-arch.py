@@ -41,7 +41,6 @@ def pyarch(a):
 			return res
 
 	def decode(buf, pc):
-		print(pc, len(buf))
 		ops = {
 			0: {
 				"op": {
