@@ -29,7 +29,7 @@ void py_export_arch_enum(PyObject *tp_dict) {
 		}\
 	}
 
-	// arch info, see radare2/libr/include/r_arch.h for documentation	
+	// arch info, see radare2/libr/include/r_arch.h for documentation
 	PYENUM(R_ARCH_INFO_MINOP_SIZE);
 	PYENUM(R_ARCH_INFO_MAXOP_SIZE);
 	PYENUM(R_ARCH_INFO_INVOP_SIZE);
@@ -39,7 +39,16 @@ void py_export_arch_enum(PyObject *tp_dict) {
 	PYENUM(R_ARCH_INFO_DATA4_ALIGN);
 	PYENUM(R_ARCH_INFO_DATA8_ALIGN);
 
-	// opcode type, see radare2/libr/include/r_anal/op.h for documentation	
+	// decode/encode operations, see radare2/libr/include/r_arch.h for documentation
+	PYENUM(R_ARCH_OP_MASK_BASIC);
+	PYENUM(R_ARCH_OP_MASK_ESIL);
+	PYENUM(R_ARCH_OP_MASK_VAL);
+	PYENUM(R_ARCH_OP_MASK_HINT);
+	PYENUM(R_ARCH_OP_MASK_OPEX);
+	PYENUM(R_ARCH_OP_MASK_DISASM);
+	PYENUM(R_ARCH_OP_MASK_ALL);
+
+	// opcode type, see radare2/libr/include/r_anal/op.h for documentation
 	PYENUM(R_ARCH_OP_MOD_COND);
 	PYENUM(R_ARCH_OP_MOD_REP);
 	PYENUM(R_ARCH_OP_MOD_MEM);
@@ -238,9 +247,33 @@ static char *py_arch_regs(RArchSession *as) {
 
 static bool py_arch_encode(RArchSession *as, RAnalOp *op, RArchEncodeMask mask) {
 	r_return_val_if_fail (as && op, false);
-	// TODO
-//	R_LOG_WARN ("py_arch_encode not implemented");
-	return true;
+//	R_LOG_INFO ("py_arch_encode called");
+	bool res = false;
+	if (py_arch_encode_cb) {
+		PyObject *arglist = Py_BuildValue ("(Ks)", op->addr, op->mnemonic);
+		PyObject *result = PyObject_CallObject (py_arch_encode_cb, arglist);
+		if (result) {
+			if (PyBytes_Check (result)) {
+				int size = PyBytes_Size (result);
+				if (size > 0) {
+					free (op->bytes);
+					op->bytes = r_mem_dup (PyBytes_AsString (result), size);
+					op->size = size;
+					res = true;
+				} else {
+					R_LOG_WARN ("No assembled bytes returned by Python arch plugin");
+				}
+			}
+			Py_DECREF (result);
+		}
+		Py_DECREF (arglist);
+	} else {
+		R_LOG_WARN ("Python arch plugin does not implement encode");
+	}
+	if (PyErr_Occurred ()) {
+		PyErr_Print ();
+	}
+	return res;
 }
 
 static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
@@ -257,8 +290,8 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 			.itemsize = 1
 		};
 		PyObject *memview = PyMemoryView_FromBuffer (&pybuf);
-		PyObject *arglist = Py_BuildValue ("(NK)", memview, op->addr);
-		PyObject *result = PyObject_CallFunction (py_arch_decode_cb, "NK", memview, op->addr);
+		PyObject *arglist = Py_BuildValue ("(NKi)", memview, op->addr, mask);
+		PyObject *result = PyObject_CallObject (py_arch_decode_cb, arglist);
 		if (result) {
 			if (PyList_Check (result)) {
 				PyObject *len = PyList_GetItem (result, 0);
@@ -352,7 +385,7 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 		Py_DECREF (arglist);
 		Py_DECREF (memview);
 	} else {
-		R_LOG_WARN ("arch plugin does not implement decode");
+		R_LOG_WARN ("Python arch plugin does not implement decode");
 	}
 
 	if (PyErr_Occurred ()) {
@@ -384,7 +417,7 @@ static RList *py_arch_preludes(RArchSession *as) {
 
 static bool py_arch_esilcb(RArchSession *as, RArchEsilAction action) {
 	r_return_val_if_fail (as, false);
-	// TODO
+	// TODO?
 //	R_LOG_WARN ("py_arch_esilcb not implemented");
 	return true;
 }
