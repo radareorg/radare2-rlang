@@ -70,7 +70,7 @@ def pyarch(a):
 			},
 			1: {
 				"op": {
-					"mnemonic" : "mov r{}, [0x{:02x}]".format(buf[1], buf[2]),
+					"mnemonic" : "mov r{}, 0x{:02x}".format(buf[1], buf[2]),
 					"type" : R.R_ANAL_OP_TYPE_MOV,
 					"cycles" : 2,
 					"ptr" : buf[2],
@@ -117,8 +117,11 @@ def pyarch(a):
 		if asm[0] == "nop":
 			return b'\x00'
 		elif asm[0] == "mov" and len(asm) == 4:
-			if asm[1].startswith("r") and asm[3].isdigit():
-				return bytes([1, int(asm[1][1:]), int(asm[3])])
+			if asm[1].startswith("r"):
+				if asm[3].isdigit():
+					return bytes([1, int(asm[1][1:]), int(asm[3])])
+				if asm[3].startswith("0x"):
+					return bytes([1, int(asm[1][1:]), int(asm[3], 16)])
 		return None
 
 	# definition of the architecture this plugin implements
