@@ -192,20 +192,32 @@ void py_export_arch_enum(PyObject *tp_dict) {
 }
 
 static bool py_arch_init(RArchSession *as) {
-	// is this needed/called?
+//	R_LOG_INFO ("py_arch_init called");
 	r_return_val_if_fail (as, false);
-	// R_LOG_WARN ("py_arch_init not implemented");
-	return true;
+	int res = true;	// it's ok if init is missing
+	if (py_arch_init_cb) {
+		PyObject *result = PyObject_CallObject (py_arch_init_cb, NULL);
+		if (result) {
+			// no return value expected
+			Py_DECREF (result);
+		}
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
+			res = false;
+		}
+	}
+	return res;
 }
 
 static bool py_arch_fini(RArchSession *as) {
 	// is this needed/called?
+	R_LOG_WARN ("py_arch_fini not implemented");
 	r_return_val_if_fail (as, false);
-	// R_LOG_WARN ("py_arch_fini not implemented");
 	return true;
 }
 
 static int py_arch_info(RArchSession *as, ut32 q) {
+//	R_LOG_INFO ("py_arch_info called");	
 	r_return_val_if_fail (as, -1);
 	int res = -1;
 	if (py_arch_info_cb) {
@@ -216,17 +228,18 @@ static int py_arch_info(RArchSession *as, ut32 q) {
 				res = PyLong_AsLong (result);
 			}
 			Py_DECREF (result);
-		} else {
-			PyErr_Print();
 		}
 		Py_DECREF (arglist);
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
+		}
 	}
 	return res;
 }
 
 static char *py_arch_regs(RArchSession *as) {
-	r_return_val_if_fail (as, NULL);
 //	R_LOG_INFO ("py_arch_regs called");
+	r_return_val_if_fail (as, NULL);
 	char *res = NULL;
 	if (py_arch_regs_cb) {
 		PyObject *result = PyObject_CallObject (py_arch_regs_cb, NULL);
@@ -238,16 +251,17 @@ static char *py_arch_regs(RArchSession *as) {
 				}
 			}
 			Py_DECREF (result);
-		} else {
-			PyErr_Print();
+		}
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
 		}
 	}
 	return res;
 }
 
 static bool py_arch_encode(RArchSession *as, RAnalOp *op, RArchEncodeMask mask) {
-	r_return_val_if_fail (as && op, false);
 //	R_LOG_INFO ("py_arch_encode called");
+	r_return_val_if_fail (as && op, false);
 	bool res = false;
 	if (py_arch_encode_cb) {
 		PyObject *arglist = Py_BuildValue ("(Ks)", op->addr, op->mnemonic);
@@ -267,19 +281,18 @@ static bool py_arch_encode(RArchSession *as, RAnalOp *op, RArchEncodeMask mask) 
 			Py_DECREF (result);
 		}
 		Py_DECREF (arglist);
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
+		}
 	} else {
 		R_LOG_WARN ("Python arch plugin does not implement encode");
-	}
-	if (PyErr_Occurred ()) {
-		PyErr_Print ();
 	}
 	return res;
 }
 
 static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
-	r_return_val_if_fail (as && op, false);
-	// WIP
 //	R_LOG_INFO ("py_arch_decode called");
+	r_return_val_if_fail (as && op, false);
 	bool res = false;
 	if (py_arch_decode_cb) {
 		Py_buffer pybuf = {
@@ -384,12 +397,11 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 		} 
 		Py_DECREF (arglist);
 		Py_DECREF (memview);
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
+		}
 	} else {
 		R_LOG_WARN ("Python arch plugin does not implement decode");
-	}
-
-	if (PyErr_Occurred ()) {
-		PyErr_Print ();
 	}
 	return res;
 }

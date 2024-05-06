@@ -10,6 +10,12 @@ import r2lang
 from r2lang import R
 
 def pyarch(a):
+	# called when arch is activated in radare2, useful to run r2 commands
+	# with rlang.cmd() to set variables or create IO maps
+	def init():
+		r2lang.cmd("e asm.syntax=intel")
+		return
+
 	# describes layout of register file for the architecture
 	#   return: string with layout of the register file
 	def regs():
@@ -139,6 +145,7 @@ def pyarch(a):
 		"bits": 32,
 		"license": "GPL",
 		"desc": "arch plugin in python",
+		"init": init,
 		"regs": regs,
 		"info": info,
 		"decode": decode,
