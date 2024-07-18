@@ -1,4 +1,4 @@
-/* lang.tcl plugin for r2 - 2023 - pancake */
+/* lang.tcl plugin for r2 - 2023-2024 - pancake */
 
 #include <r_lib.h>
 #include <r_core.h>
@@ -7,9 +7,11 @@
 
 static R_TH_LOCAL RCore *Gcore = NULL;
 static R_TH_LOCAL Tcl_Interp *interp = NULL;
-static void tcl_free( char *blockPtr) {
+
+static void tcl_free(char *blockPtr) {
 	free (blockPtr);
 }
+
 static int r2cmd_tcl(void *clientData, Tcl_Interp *interp, int argc, const char **argv) {
 	RCore *core = (RCore *)clientData;
 	if (argc == 2) {
@@ -27,7 +29,8 @@ static bool runstr(RLangSession *s, const char *code, int len) {
 	}
 	return false;
 }
-static bool init(RLangSession *s) {
+
+static bool init(R_NULLABLE RLangSession *s) {
 	if (s == NULL) {
 		return true;
 	}
@@ -37,9 +40,8 @@ static bool init(RLangSession *s) {
 	if (interp == NULL) {
 		interp = Tcl_CreateInterp ();
 		Tcl_Init (interp);
-		Tcl_CreateCommand(interp, "r2cmd", r2cmd_tcl, (ClientData) Gcore, NULL);
+		Tcl_CreateCommand (interp, "r2cmd", r2cmd_tcl, (ClientData) Gcore, NULL);
 	}
-	// scm_c_define_gsubr ("r2cmd", 1, 0, 0, r2cmd_wrapper);
 	return true;
 }
 
@@ -49,8 +51,6 @@ static bool fini(RLangSession *s) {
 	return true;
 }
 
-
-// should be bool
 static bool runfile(RLangSession *s, const char *file) {
 	char *data = r_file_slurp (file, NULL);
 	if (data) {
