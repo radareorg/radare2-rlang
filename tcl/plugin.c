@@ -24,7 +24,8 @@ static int r2cmd_tcl(void *clientData, Tcl_Interp *interp, int argc, const char 
 
 static bool runstr(RLangSession *s, const char *code, int len) {
 	if (Tcl_Eval (interp, code) == TCL_ERROR) {
-		R_LOG_ERROR ("Failed to eval");
+		const char *error_msg = Tcl_GetStringResult (interp);
+		R_LOG_ERROR ("Failed to eval %s", error_msg);
 		return true;
 	}
 	return false;
@@ -56,8 +57,9 @@ static bool runfile(RLangSession *s, const char *file) {
 	if (data) {
 		char *line = r_str_newf ("source %s", file);
 		if (Tcl_Eval (interp, line) == TCL_ERROR) {
+			const char *error_msg = Tcl_GetStringResult (interp);
+			R_LOG_ERROR ("Failed to eval: %s", error_msg);
 			free (line);
-			R_LOG_ERROR ("Failed to eval");
 			return false;
 		}
 		free (line);
