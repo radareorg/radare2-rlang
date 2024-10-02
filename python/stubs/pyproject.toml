@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "radare-stubs"
+version = "0.1.0"
+description = "Stubs for radare core api"
+authors = ["radareorg <pancake@nopcode.org>"]
+readme = "../../README.md"
+packages = [{include = "radare_stubs.py"}]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
