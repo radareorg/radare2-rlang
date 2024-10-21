@@ -1,4 +1,4 @@
-/* radare2 - LGPL - Copyright 2009-2023 - pancake */
+/* radare2 - LGPL - Copyright 2009-2024 - pancake */
 /* python extension for radare2's r_lang */
 
 #include <r_core.h>
@@ -363,12 +363,12 @@ RLangPlugin PLUGIN_NAME = {
 	.meta = {
 		.name = "python",
 		.desc = "Python language extension",
-		.license = "LGPL",
+		.license = "LGPL-3.0-only",
 	},
 #else
 	.name = "python",
 	.desc = "Python language extension",
-	.license = "LGPL",
+	.license = "LGPL-3.0-only",
 #endif
 	.alias = "python",
 	.ext = "py",
