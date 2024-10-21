@@ -1,4 +1,4 @@
-/* radare - LGPL - Copyright 2009-2017 - pancake, nibble */
+/* radare - LGPL - Copyright 2009-2024 - pancake, nibble */
 /* perl extension for libr (radare2) */
 
 #include "r_lib.h"
@@ -36,9 +36,9 @@ static void xs_init(pTHX) {
 	newXS ("r", perl_radare_cmd, __FILE__);
 }
 
-static bool init(RLang *lang) {
+static bool init(RLangSession *ls) {
 	char *perl_embed[] = { "", "-e", "0" };
-	core = lang->user;
+	core = ls->lang->user;
 	my_perl = perl_alloc ();
 	if (!my_perl) {
 		fprintf (stderr, "Cannot init perl module\n");
@@ -67,23 +67,26 @@ static int setargv(void *user, int argc, char **argv) {
 	return true;
 }
 
-static bool setup(RLang *lang) {
+static bool setup(RLangSession *ls) {
 	RListIter *iter;
 	RLangDef *def;
 	char cmd[128];
 	// Segfault if already initialized ?
 	//PyRun_SimpleString ("require r2/r_core.pl");
 #warning TODO: implement setup in lang/perl
-	core = lang->user;
-	r_list_foreach (lang->defs, iter, def) {
-		if (!def->type || !def->name)
+	core = ls->lang->user;
+	r_list_foreach (ls->lang->defs, iter, def) {
+		if (!def->type || !def->name) {
 			continue;
-		if (!strcmp (def->type, "int"))
+		}
+		if (!strcmp (def->type, "int")) {
 			snprintf (cmd, sizeof (cmd), "%s=%d", def->name, (int)(size_t)def->value);
-		else if (!strcmp (def->type, "string"))
+		} else if (!strcmp (def->type, "string")) {
 			snprintf (cmd, sizeof (cmd), "%s=\"%s\"", def->name, (char *)def->value);
-		else snprintf (cmd, sizeof (cmd), "%s=%s.cast(%p)",
-			def->name, def->type, def->value);
+		} else {
+			snprintf (cmd, sizeof (cmd), "%s=%s.cast(%p)",
+				def->name, def->type, def->value);
+		}
 	//	PyRun_SimpleString (cmd);
 	}
 	return true;
@@ -94,12 +97,14 @@ static const char *help =
 	" print \"r(\"pd 10\")\\n\";\n";
 
 static RLangPlugin r_lang_plugin_perl = {
-	.name = "perl",
+	.meta = {
+		.name = "perl",
+		.desc = "Perl language extension",
+	},
 	.ext = "pl",
-	.desc = "Perl language extension",
-	.init = &init,
-	.setup = &setup,
-	.fini = (void *)&fini,
+	.init = init,
+	.setup = setup,
+	.fini = (void *)fini,
 	.help = (void *)&help,
 	.prompt = NULL,
 	.run = (void *)&run,
