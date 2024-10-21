@@ -1,4 +1,4 @@
-/* lang.lua plugin for r2 - 2013-2022 - pancake */
+/* lang.lua plugin for r2 - 2013-2024 - pancake */
 
 #include <r_lib.h>
 #include <r_core.h>
@@ -6,7 +6,6 @@
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
-#include <lstate.h>
 
 #define LIBDIR PREFIX"/lib"
 
@@ -87,7 +86,8 @@ static bool r_lua_file(RLangSession *s, const char *file) {
 }
 
 static int lua_cmd_str(lua_State *L) {
-	RCore *core = L->l_G->ud_warn;
+	lua_getglobal (L, "RCoreStar");
+	RCore *core = (RCore *)lua_touserdata (L, -1);
 	const char *s = lua_tostring (L, 1);  /* get argument */
 	char *str = r_core_cmd_str (core, s);
 	lua_pushstring (L, r_str_get (str));  /* push result */
@@ -96,16 +96,17 @@ static int lua_cmd_str(lua_State *L) {
 }
 
 static int lua_cmd(lua_State *L) {
-	RCore *core = L->l_G->ud_warn;
+	lua_getglobal (L, "RCoreStar");
+	RCore *core = (RCore *)lua_touserdata (L, -1);
 	const char *s = lua_tostring (L, 1);  /* get argument */
 	lua_pushnumber (L, r_core_cmd (core, s, 0));  /* push result */
 	return 1;  /* number of results */
 }
 
-static void *init(RLangSession *s) {
+static bool init(RLangSession *s) {
 	lua_State *L = luaL_newstate ();
 	if (!L) {
-		return NULL;
+		return false;
 	}
 	lua_gc (L, LUA_GCSTOP, 0);
 	luaL_openlibs (L);
@@ -116,7 +117,11 @@ static void *init(RLangSession *s) {
 	s->plugin_data = L;
 
 	// we save the RCore pointer into this unused luaglobal state field
-	L->l_G->ud_warn = s->lang->user;
+	// L->l_G->ud_warn = s->lang->user;
+	void **ud = (void **)lua_newuserdata(L, sizeof(void *));
+	*ud = s->lang->user; // Store the original void* in the allocated memory
+	// Store it in a global variable or table
+	lua_setglobal(L, "RCoreStar");
 #if 0
 	// this mode is buggy because scripts can modify this global
 	// and make r2cmd calls crash or execute arbitrary code
@@ -172,14 +177,17 @@ static void *init(RLangSession *s) {
 	/// DEPRECATED theres no need for this. better embed everything in into this .c
 	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
 	// r_lua_file (NULL, LIBDIR"/radare2/"R2_VERSION"/r2api.lua");
-	return L;
+	s->plugin_data = L;
+	return true;
 }
 
 static RLangPlugin r_lang_plugin_lua = {
-	.name = "lua",
+	.meta = {
+		.name = "lua",
+		.license = "BSD-3-Clause", // LUA license is not an SPDX standard lol
+		.desc = "LUA 5.4.4 language extension",
+	},
 	.ext = "lua",
-	.license = "LUA",
-	.desc = "LUA 5.4.4 language extension",
 	.run = lua_run,
 	.init = init,
 	.run_file = r_lua_file,
