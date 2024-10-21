@@ -74,7 +74,7 @@ static bool runfile(RLangSession *s, const char *file) {
 static RLangPlugin r_lang_plugin_tcl = {
 	.meta = {
 		.name = "tcl",
-		.license = "LGPL",
+		.license = "MIT",
 		.desc = "TCL/TK scripting for radare2",
 		.author = "pancake"
 	},
