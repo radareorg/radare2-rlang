@@ -1,15 +1,7 @@
-/* radare - LGPL - Copyright 2014-2022 pancake */
+/* radare - LGPL - Copyright 2014-2024 pancake */
 
 #define _XOPEN_SOURCE
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <r_lib.h>
 #include <r_core.h>
-#include <r_arch.h>
-#include <r_lang.h>
-
 #include "./duk/duktape.c"
 #include "./duk/duk_console.c"
 
@@ -41,14 +33,14 @@ static void register_r2cmd_duktape(RLangSession *s, duk_context *ctx);
 static bool lang_duktape_run(RLangSession *s, const char *code, int len);
 static bool lang_duktape_file(RLangSession *s, const char *file);
 
-static void *init(RLangSession *s) {
+static bool init(RLangSession *s) {
 	R2DukContext *k = s->plugin_data;
 	if (k) {
-		return NULL;
+		return false;
 	}
 	k = R_NEW0 (R2DukContext);
 	if (!k) {
-		return NULL;
+		return false;
 	}
 	Gk = k;
 	k->Gctx = duk_create_heap_default ();
@@ -62,7 +54,7 @@ static void *init(RLangSession *s) {
 		"console.log(JSON.stringify(x).replace(/,/g,',\\n '));"
 		"for(var i in x) {console.log(i);}}");
 	s->plugin_data = k; // implicit
-	return k;
+	return true;
 }
 static bool fini(RLangSession *s) {
 	R2DukContext *k = s->plugin_data;
@@ -75,7 +67,7 @@ static void pushBuffer(R2DukContext *k, const ut8 *buf, int len) {
 	duk_context *Gctx = k->Gctx;
 	int i;
 	duk_push_fixed_buffer (Gctx, len);
-	for (i=0; i<len; i++) {
+	for (i = 0; i < len; i++) {
 		duk_push_number (Gctx, buf[i]);
 		duk_put_prop_index (Gctx, -2, i);
 	}
@@ -157,14 +149,16 @@ static bool duk_disasm(RArchSession *s, RAnalOp *op, RArchDecodeMask mask) {
 			duk_pop (Gctx);
 		}
 	} else {
-		eprintf ("[:(] Is not a function %02x %02x\n", b[0],b[1]);
+		R_LOG_ERROR ("[:(] Is not a function %02x %02x", b[0],b[1]);
 	}
 
 	// fill op struct
 	op->size = res;
-	if (!opstr) opstr = "invalid";
+	if (!opstr) {
+		opstr = "invalid";
+	}
 	r_asm_op_set_asm (op, opstr);
-	char *hexstr = malloc(op->size * 2);
+	char *hexstr = malloc (op->size * 2);
 	if (hexstr) {
 		r_hex_bin2str (buf, op->size, hexstr);
 		r_asm_op_set_hex (op, hexstr);
@@ -179,7 +173,7 @@ static int r2plugin(duk_context *Gctx) {
 	// args: type, function
 	const char *type = duk_require_string (Gctx, 0);
 	if (strcmp (type, "arch")) {
-		eprintf ("TODO: duk.r2plugin only supports 'arch' plugins atm\n");
+		R_LOG_TODO ("duk.r2plugin only supports 'arch' plugins atm");
 		return false;
 	}
 	// call function of 2nd parameter, or get object
@@ -189,7 +183,7 @@ static int r2plugin(duk_context *Gctx) {
 		duk_to_object (Gctx, 1);
 	}
 	if (!duk_is_object (Gctx, 1)) {
-		eprintf ("Expected object or function\n");
+		R_LOG_ERROR ("Expected object or function");
 		return false;
 	}
 	duk_to_object (Gctx, 1);
@@ -225,25 +219,27 @@ static int r2plugin(duk_context *Gctx) {
 	duk_pop (Gctx);
 
 	// mandatory
-	GETSTR (ap->name, "name", NULL);
+	GETSTR (ap->meta.name, "name", NULL);
 	GETSTR (ap->arch, "arch", NULL);
 	// optional
-	GETSTR (ap->license, "license", "unlicensed");
-	GETSTR (ap->desc, "description", "JS Disasm Plugin");
+	GETSTR (ap->meta.license, "license", "unlicensed");
+	GETSTR (ap->meta.desc, "description", "JS Disasm Plugin");
 	GETINT (ap->bits, "bits", 32); // XXX use pack!
 	// mandatory unless we handle asm+disasm
 	k->Guser = duk_require_tval (Gctx, -1);
-	//ap->user = duk_dup_top (Gctx); // clone object inside user
-	//GETFUN (ap->user, "disassemble");
-	duk_push_global_stash(Gctx);
+	// ap->user = duk_dup_top (Gctx); // clone object inside user
+	// GETFUN (ap->user, "disassemble");
+	duk_push_global_stash (Gctx);
 	duk_get_prop_string (Gctx, 1, "disassemble");
-	duk_put_prop_string(Gctx, -2, "disfun"); // TODO: prefix plugin name somehow
-	ap->decode = duk_disasm;
+	duk_put_prop_string (Gctx, -2, "disfun"); // TODO: prefix plugin name somehow
+	// hack to bypass the const callback
+	memcpy ((void*)&ap->decode, &duk_disasm, sizeof (ap->decode));
 
 	duk_push_global_stash(Gctx);
 	duk_get_prop_string (Gctx, 1, "assemble");
-	duk_put_prop_string(Gctx, -2, "asmfun"); // TODO: prefix plugin name somehow
-	ap->encode = duk_assemble;
+	duk_put_prop_string (Gctx, -2, "asmfun"); // TODO: prefix plugin name somehow
+	memcpy ((void*)&ap->encode, &duk_assemble, sizeof (ap->encode));
+	// ap->encode = duk_assemble;
 
 #if 0
 	duk_get_prop_string (Gctx, 1, "disassemble");
@@ -319,12 +315,12 @@ static void print_error(duk_context *Gctx, FILE *f) {
 		/* FIXME: pcall the string coercion */
 		duk_get_prop_string (Gctx, -1, "stack");
 		if (duk_is_string (Gctx, -1)) {
-			fprintf (f, "%s\n", duk_get_string(Gctx, -1));
+			fprintf (f, "%s\n", duk_get_string (Gctx, -1));
 			fflush (f);
 			duk_pop_2 (Gctx);
-			return; } else {
-			duk_pop (Gctx);
+			return;
 		}
+		duk_pop (Gctx);
 	}
 	duk_to_string (Gctx, -1);
 	fprintf (f, "%s\n", duk_get_string (Gctx, -1));
@@ -376,7 +372,7 @@ static bool lang_duktape_file(RLangSession *s, const char *file) {
 		ret = duk_safe_call (k->Gctx, wrapped_compile_execute, NULL, 2, 1);
 		if (ret != DUK_EXEC_SUCCESS) {
 			print_error (k->Gctx, stderr);
-			eprintf ("duktape error");
+			R_LOG_ERROR ("duktape");
 		} else {
 			duk_pop (k->Gctx);
 			ret = 1;
@@ -386,10 +382,12 @@ static bool lang_duktape_file(RLangSession *s, const char *file) {
 }
 
 static RLangPlugin r_lang_plugin_duktape = {
-	.name = "duktape",
+	.meta = {
+		.name = "duktape",
+		.desc = "JavaScript extension language using DukTape",
+		.license = "LGPL",
+	},
 	.ext = "duk",
-	.desc = "JavaScript extension language using DukTape",
-	.license = "LGPL",
 	.run = lang_duktape_run,
 	.init = init,
 	.fini = fini,
