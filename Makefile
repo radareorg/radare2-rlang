@@ -1,6 +1,6 @@
 include config.mk
 
-LANGS?=python duktape quickjs lua perl vlang
+LANGS?=python duktape lua perl vlang
 
 # WIP language support
 # LANGS+=csharp

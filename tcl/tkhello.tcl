@@ -1,5 +1,10 @@
 package require Tk
 
+source "/tmp/colorutils.tcl"
+source "/tmp/awthemes.tcl"
+# source "/tmp/awclearlooks.tcl"
+# source "/tmp/awblack.tcl"
+
 # proc r2cmd {} { return "" }
 
 set ver [r2cmd "?V"]
