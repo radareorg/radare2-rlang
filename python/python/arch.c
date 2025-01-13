@@ -138,7 +138,7 @@ void py_export_arch_enum(PyObject *tp_dict) {
 	PYENUM(R_ANAL_STACK_SET);
 	PYENUM(R_ANAL_STACK_RESET);
 	PYENUM(R_ANAL_STACK_ALIGN);
-
+#if 0
 	// opcode condition, see radare2/libr/include/r_anal/op.h for documentation
 	PYENUM(R_ANAL_COND_AL);
 	PYENUM(R_ANAL_COND_EQ);
@@ -156,7 +156,7 @@ void py_export_arch_enum(PyObject *tp_dict) {
 	PYENUM(R_ANAL_COND_VC);
 	PYENUM(R_ANAL_COND_HI);
 	PYENUM(R_ANAL_COND_LS);
-
+#endif
 	// opcode direction, see radare2/libr/include/r_anal/op.h for documentation
 	PYENUM(R_ANAL_OP_DIR_READ);
 	PYENUM(R_ANAL_OP_DIR_WRITE);
