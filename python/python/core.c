@@ -1,9 +1,9 @@
-/* radare - LGPL - Copyright 2016-2023 - pancake */
+/* radare - LGPL - Copyright 2016-2025 - pancake */
 
 #include "core.h"
 
 // TODO: XXX remove globals
-R_TH_LOCAL RCore *core = NULL;
+R_TH_LOCAL RCore *Gcore = NULL;
 static R_TH_LOCAL void *py_core_call_cb = NULL;
 
 static int py_core_call(void *user, const char *str) {
@@ -80,6 +80,6 @@ PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 		.free = (void (*)(void *data))Radare_plugin_core_free
 	};
 	R_LOG_DEBUG ("PLUGIN[python] Loading core: %s", meta.name);
-	r_lib_open_ptr (core->lib, "python-r_core.py", NULL, &lp);
+	r_lib_open_ptr (Gcore->lib, "python-r_core.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }

@@ -6,79 +6,86 @@
 typedef struct {
 	ut64 off;
 	PyObject *result;
+	void *py_io_open_cb;
+	void *py_io_check_cb;
+	void *py_io_read_cb;
+	void *py_io_system_cb;
+	void *py_io_seek_cb;
+	void *py_io_close_cb;
 } DescData;
 
-#if 0
-/* r_io */
-static RIOPlugin *py_io_plugin = NULL;
-#else
-static void *py_io_open_cb = NULL;
-static void *py_io_check_cb = NULL;
-static void *py_io_read_cb = NULL;
-static void *py_io_system_cb = NULL;
-static void *py_io_seek_cb = NULL;
-static void *py_io_close_cb = NULL;
-#endif
-
 static bool py_io_check(RIO *io, const char *path, bool many);
+
+static bool py_io_check_internal(RIOPlugin *py_io_plugin, RIO *io, const char *path, bool many) {
+	bool res = false;
+	PyObject *arglist = Py_BuildValue ("(zO)", path, many? Py_True: Py_False);
+	DescData *dd = py_io_plugin->data;
+	if (!dd) {
+		R_LOG_ERROR ("iop.data is nul");
+		return false;
+	}
+	Py_INCREF (arglist);
+	PyObject *result = PyObject_CallObject (dd->py_io_check_cb, arglist);
+	if (result && PyBool_Check (result)) {
+		res = result == Py_True;
+		Py_DECREF (result);
+	}
+	Py_DECREF (arglist);
+	return res;
+}
 
 static RIOPlugin *iop_check(RIO *io, const char *path) {
 	SdbListIter *iter;
 	RIOPlugin *iop;
 	ls_foreach (io->plugins, iter, iop) {
 		if (iop->check == py_io_check) {
-			if (py_io_check (io, path, false)) {
+			if (py_io_check_internal (iop, io, path, false)) {
+				R_LOG_INFO ("Plugin found");
 				return iop;
 			}
 		}
 	}
+				R_LOG_INFO ("noPlugin found");
 	return NULL;
 }
 
 static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
-	if (py_io_open_cb) {
-		RIOPlugin *py_io_plugin = iop_check (io, path);
-		if (!py_io_plugin) {
-			return NULL;
-		}
-		PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
-		PyObject *result = PyObject_CallObject (py_io_open_cb, arglist);
-		if (!result) { // exception was thrown
-			return NULL;
-		}
-		Py_DECREF (arglist);
-		Py_INCREF (result);
-		DescData *dd = R_NEW0 (DescData);
-		dd->result = result;
-		return r_io_desc_new (io, py_io_plugin, path, rw, mode, dd);
+	RIOPlugin *py_io_plugin = iop_check (io, path);
+	if (!py_io_plugin) {
+		R_LOG_ERROR ("Cannot find io plugin for %s", path);
+		return NULL;
 	}
-	return NULL;
+	DescData *iodd = py_io_plugin->data;
+	PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
+	PyObject *result = PyObject_CallObject (iodd->py_io_open_cb, arglist);
+	if (!result) { // exception was thrown
+		return NULL;
+	}
+	Py_DECREF (arglist);
+	Py_INCREF (result);
+	DescData *dd = r_mem_dup (py_io_plugin->data, sizeof (DescData));
+	dd->result = result;
+	return r_io_desc_new (io, py_io_plugin, path, rw, mode, dd);
 }
 
 static bool py_io_check(RIO *io, const char *path, bool many) {
-	bool res = false;
-	if (py_io_check_cb) {
-		PyObject *arglist = Py_BuildValue ("(zO)", path, many?Py_True:Py_False);
-		Py_INCREF (arglist);
-		PyObject *result = PyObject_CallObject (py_io_check_cb, arglist);
-		if (result && PyBool_Check (result)) {
-			res = result == Py_True;
-			Py_DECREF (result);
-		}
-		Py_DECREF (arglist);
+	RIOPlugin *py_io_plugin = iop_check (io, path);
+	if (py_io_plugin) {
+		return py_io_check_internal (py_io_plugin, io, path, many);
 	}
-	return res; 
+	return false;
 }
 
 static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
-	if (py_io_seek_cb) {
+	DescData *dd = fd->data;
+	if (dd->py_io_seek_cb) {
 		DescData *dd = fd->data;
 		PyObject *arglist = Py_BuildValue ("(NKi)", (PyObject *)dd->result, offset, whence);
 		if (!arglist) {
 			return UT64_MAX;
 		}
 		Py_INCREF (arglist);
-		PyObject *result = PyObject_CallObject (py_io_seek_cb, arglist);
+		PyObject *result = PyObject_CallObject (dd->py_io_seek_cb, arglist);
 		if (result) {
 			if (PyLong_Check (result)) {
 				dd->off = PyLong_AsLong (result);
@@ -102,13 +109,13 @@ static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
 }
 
 static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
-	if (!py_io_read_cb) {
+	DescData *dd = fd->data;
+	if (!dd->py_io_read_cb) {
 		return -1;
 	}
-	DescData *dd = fd->data;
 	PyObject *arglist = Py_BuildValue ("(Oi)", (PyObject *)dd->result, count);
 	Py_INCREF (arglist);
-	PyObject *result = PyObject_CallObject (py_io_read_cb, arglist);
+	PyObject *result = PyObject_CallObject (dd->py_io_read_cb, arglist);
 	if (result) {
 		if (PyByteArray_Check (result)) {
 			const char *ptr = PyByteArray_AsString (result);
@@ -154,10 +161,10 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 	DescData *dd = desc->data;
 	char * res = NULL;
-	if (py_io_system_cb) {
+	if (dd->py_io_system_cb) {
 		PyObject *arglist = Py_BuildValue ("(Oz)", (PyObject *)dd->result, cmd);
 		Py_INCREF (arglist);
-		PyObject *result = PyObject_CallObject (py_io_system_cb, arglist);
+		PyObject *result = PyObject_CallObject (dd->py_io_system_cb, arglist);
 		if (result) {
 			if (PyUnicode_Check (result)) {
 				res = PyBytes_AS_STRING (result);
@@ -180,23 +187,28 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 static bool py_io_close(RIODesc *desc) {
 	DescData *dd = desc->data;
 	int ret = 0;
-	if (dd && py_io_close_cb) {
+	if (dd && dd->py_io_close_cb) {
 		PyObject *arglist = Py_BuildValue ("(N)", (PyObject *)dd->result);
-		PyObject *result = PyObject_CallObject (py_io_close_cb, arglist);
+		PyObject *result = PyObject_CallObject (dd->py_io_close_cb, arglist);
 		if (PyLong_Check (result)) {
 			ret = PyLong_AsLong (result);
 		}
 		Py_DECREF (arglist);
 		Py_DECREF (result);
+#if 0
 		while (Py_REFCNT (dd->result)) { // HACK
 			Py_DECREF (dd->result);
 		}
+#endif
 		R_FREE (desc->data);
 	}
 	return ret != 0;
 }
 
 void Radare_plugin_io_free(RIOPlugin *ap) {
+#if R2_VERSION_NUMBER > 50909
+	free (ap->data);
+#endif
 #if R2_VERSION_NUMBER > 50808
 	free ((char *)ap->meta.name);
 	free ((char *)ap->meta.desc);
@@ -234,6 +246,13 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	ap->desc = getS (o, "desc");
 	ap->license = getS (o, "license");
 #endif
+	void *py_io_open_cb = NULL;
+	void *py_io_check_cb = NULL;
+	void *py_io_read_cb = NULL;
+	void *py_io_system_cb = NULL;
+	void *py_io_seek_cb = NULL;
+	void *py_io_close_cb = NULL;
+
 	void *ptr = getF (o, "open");
 	if (ptr) {
 		Py_INCREF (ptr);
@@ -275,13 +294,22 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	ptr = getF (o, "resize");
 #endif
 	Py_DECREF (o);
+#if R2_VERSION_NUMBER >= 50909
+	DescData *dd = R_NEW0 (DescData);
+	dd->py_io_open_cb = py_io_open_cb;
+	dd->py_io_check_cb = py_io_check_cb;
+	dd->py_io_system_cb = py_io_system_cb;
+	dd->py_io_read_cb = py_io_read_cb;
+	dd->py_io_seek_cb = py_io_seek_cb;
+	dd->py_io_close_cb = py_io_close_cb;
+	ap->data = dd;
+#endif
 
 	RLibStruct lp = {};
 	lp.type = R_LIB_TYPE_IO;
 	lp.data = ap;
 	lp.free = (void (*)(void *data))Radare_plugin_io_free;
 	R_LOG_DEBUG ("PLUGIN[python] Loading io: %s", meta.name);
-	r_lib_open_ptr (core->lib, "python.py", NULL, &lp);
+	r_lib_open_ptr (Gcore->lib, "python.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }
-

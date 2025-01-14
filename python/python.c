@@ -1,4 +1,4 @@
-/* radare2 - LGPL - Copyright 2009-2024 - pancake */
+/* radare2 - LGPL - Copyright 2009-2025 - pancake */
 /* python extension for radare2's r_lang */
 
 #include <r_core.h>
@@ -39,7 +39,7 @@ static const R2Plugins plugins[] = {
 
 static bool run(RLangSession *s, const char *code, int len) {
 	RLang *lang = s->lang;
-	core = (RCore *)lang->user;
+	Gcore = (RCore *)lang->user;
 	PyRun_SimpleString (code);
 	return true;
 }
@@ -123,7 +123,7 @@ static PyObject *Radare_cmd(Radare* self, PyObject *args) {
 	if (!PyArg_ParseTuple (args, "s", &cmd)) {
 		return NULL;
 	}
-	char *str = r_core_cmd_str (core, cmd);
+	char *str = r_core_cmd_str (Gcore, cmd);
 	return PyUnicode_FromString (str? str: py_nullstr);
 }
 
@@ -287,7 +287,7 @@ static bool setup(RLangSession *s) {
 		"except:\n"
 		"	pass\n");
 	PyRun_SimpleString ("import r2pipe");
-	core = lang->user;
+	Gcore = lang->user;
 	r_list_foreach (lang->defs, iter, def) {
 		if (!def->type || !def->name) {
 			continue;
@@ -322,7 +322,7 @@ static void *init(RLangSession *session) {
 	RLang *lang = session->lang;
 #endif
 	if (lang) {
-		core = lang->user;
+		Gcore = lang->user;
 	}
 	// DO NOT INITIALIZE MODULE IF ALREADY INITIALIZED
 	if (Py_IsInitialized ()) {
