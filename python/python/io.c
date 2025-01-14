@@ -1,7 +1,12 @@
-/* radare - LGPL - Copyright 2009-2023 - pancake */
+/* radare - LGPL - Copyright 2009-2025 - pancake */
 
 #include "io.h"
 #include "core.h"
+
+typedef struct {
+	ut64 off;
+	PyObject *result;
+} DescData;
 
 /* r_io */
 static RIOPlugin *py_io_plugin = NULL;
@@ -16,12 +21,14 @@ static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 	if (py_io_open_cb) {
 		PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
 		PyObject *result = PyObject_CallObject (py_io_open_cb, arglist);
-		if (!result) {		//exception was thrown
+		if (!result) { // exception was thrown
 			return NULL;
 		}
 		Py_DECREF (arglist);
 		Py_INCREF (result);
-		return r_io_desc_new (io, py_io_plugin, path, rw, mode, result);
+		DescData *dd = R_NEW0 (DescData);
+		dd->result = result;
+		return r_io_desc_new (io, py_io_plugin, path, rw, mode, dd);
 	}
 	return NULL;
 }
@@ -30,6 +37,7 @@ static bool py_io_check(RIO *io, const char *path, bool many) {
 	bool res = false;
 	if (py_io_check_cb) {
 		PyObject *arglist = Py_BuildValue ("(zO)", path, many?Py_True:Py_False);
+		Py_INCREF (arglist);
 		PyObject *result = PyObject_CallObject (py_io_check_cb, arglist);
 		if (result && PyBool_Check (result)) {
 			res = result == Py_True;
@@ -42,32 +50,42 @@ static bool py_io_check(RIO *io, const char *path, bool many) {
 
 static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
 	if (py_io_seek_cb) {
-		PyObject *arglist = Py_BuildValue ("(NKi)", (PyObject *)fd->data, offset, whence);
+		DescData *dd = fd->data;
+		PyObject *arglist = Py_BuildValue ("(NKi)", (PyObject *)dd->result, offset, whence);
+		if (!arglist) {
+			return UT64_MAX;
+		}
+		Py_INCREF (arglist);
 		PyObject *result = PyObject_CallObject (py_io_seek_cb, arglist);
-		if (result && PyLong_Check (result)) {
-			return io->off = PyLong_AsLong (result);
+		if (result) {
+			if (PyLong_Check (result)) {
+				dd->off = PyLong_AsLong (result);
+			} else if (PyLong_Check (result)) {
+				dd->off = PyLong_AsLongLong (result);
+			}
+			return dd->off;
+		} else {
+			R_LOG_ERROR ("NaN");
 		}
-		if (result && PyLong_Check (result)) {
-			ut64 num = PyLong_AsLongLong (result);
-			return io->off = num;
-		}
-		 PyObject_Print(result, stderr, 0);
-		//eprintf ("SEEK Unknown type returned. Number was expected.\n");
+		// PyObject_Print (result, stderr, 0);
+		// eprintf ("SEEK Unknown type returned. Number was expected.\n");
 		switch (whence) {
-		case 0: return io->off = offset;
-		case 1: return io->off += offset;
-		case 2: return 512;	//wtf is this
+		case 0: return dd->off = offset;
+		case 1: return dd->off += offset;
+		case 2: return 512; // wtf is this assumption
 		}
-		return -1;
+		return UT64_MAX;
 	}
-	return -1;
+	return UT64_MAX;
 }
 
 static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 	if (!py_io_read_cb) {
 		return -1;
 	}
-	PyObject *arglist = Py_BuildValue ("(Oi)", (PyObject *)fd->data, count);
+	DescData *dd = fd->data;
+	PyObject *arglist = Py_BuildValue ("(Oi)", (PyObject *)dd->result, count);
+	Py_INCREF (arglist);
 	PyObject *result = PyObject_CallObject (py_io_read_cb, arglist);
 	if (result) {
 		if (PyByteArray_Check (result)) {
@@ -112,9 +130,11 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 }
 
 static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
+	DescData *dd = desc->data;
 	char * res = NULL;
 	if (py_io_system_cb) {
-		PyObject *arglist = Py_BuildValue ("(Oz)", (PyObject *)desc->data, cmd);
+		PyObject *arglist = Py_BuildValue ("(Oz)", (PyObject *)dd->result, cmd);
+		Py_INCREF (arglist);
 		PyObject *result = PyObject_CallObject (py_io_system_cb, arglist);
 		if (result) {
 			if (PyUnicode_Check (result)) {
@@ -136,18 +156,20 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 }
 
 static bool py_io_close(RIODesc *desc) {
+	DescData *dd = desc->data;
 	int ret = 0;
-	if (py_io_close_cb) {
-		PyObject *arglist = Py_BuildValue ("(N)", (PyObject *)desc->data);
+	if (dd && py_io_close_cb) {
+		PyObject *arglist = Py_BuildValue ("(N)", (PyObject *)dd->result);
 		PyObject *result = PyObject_CallObject (py_io_close_cb, arglist);
 		if (PyLong_Check (result)) {
 			ret = PyLong_AsLong (result);
 		}
 		Py_DECREF (arglist);
 		Py_DECREF (result);
-		while (Py_REFCNT (desc->data)) {	//HACK
-			Py_DECREF (desc->data);
+		while (Py_REFCNT (dd->result)) { // HACK
+			Py_DECREF (dd->result);
 		}
+		R_FREE (desc->data);
 	}
 	return ret != 0;
 }
