@@ -346,11 +346,16 @@ static void *init(RLangSession *session) {
 }
 
 static bool fini(RLangSession *user) {
+#if 1
+	// better leak than segfault here. future check
+	return true;
+#else
 #if (PY_MAJOR_VERSION >= 3) && (PY_MINOR_VERSION >= 6)
 	return Py_FinalizeEx () ? false : true;
 #else
 	Py_Finalize ();
 	return true;
+#endif
 #endif
 }
 

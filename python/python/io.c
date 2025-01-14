@@ -8,17 +8,39 @@ typedef struct {
 	PyObject *result;
 } DescData;
 
+#if 0
 /* r_io */
 static RIOPlugin *py_io_plugin = NULL;
+#else
 static void *py_io_open_cb = NULL;
 static void *py_io_check_cb = NULL;
 static void *py_io_read_cb = NULL;
 static void *py_io_system_cb = NULL;
 static void *py_io_seek_cb = NULL;
 static void *py_io_close_cb = NULL;
+#endif
+
+static bool py_io_check(RIO *io, const char *path, bool many);
+
+static RIOPlugin *iop_check(RIO *io, const char *path) {
+	SdbListIter *iter;
+	RIOPlugin *iop;
+	ls_foreach (io->plugins, iter, iop) {
+		if (iop->check == py_io_check) {
+			if (py_io_check (io, path, false)) {
+				return iop;
+			}
+		}
+	}
+	return NULL;
+}
 
 static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 	if (py_io_open_cb) {
+		RIOPlugin *py_io_plugin = iop_check (io, path);
+		if (!py_io_plugin) {
+			return NULL;
+		}
 		PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
 		PyObject *result = PyObject_CallObject (py_io_open_cb, arglist);
 		if (!result) { // exception was thrown
@@ -122,7 +144,7 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 			count = (int)limit;
 		}
 	} else {
-		eprintf ("Unknown type returned. List was expected.\n");
+		R_LOG_ERROR ("Unknown type returned. List was expected");
 	}
 	Py_DECREF (arglist);
 	Py_DECREF (result);
@@ -145,7 +167,7 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 				long n = PyLong_AsLong (result);
 				res = r_str_newf ("%ld", n);
 			} else {
-				eprintf ("Unknown type returned. Boolean was expected.\n");
+				R_LOG_ERROR ("Unknown type returned. Boolean was expected");
 			}
 		}
 		// PyObject_Print(result, stderr, 0);
@@ -195,7 +217,6 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	if (!ap) {
 		return Py_False;
 	}
-	py_io_plugin = ap;
 #if R2_VERSION_NUMBER > 50808
 	RPluginMeta meta = {
 		.name = getS (o, "name"),
