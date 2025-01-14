@@ -4,23 +4,41 @@
 
 // TODO: XXX remove globals
 R_TH_LOCAL RCore *Gcore = NULL;
+#if R2_VERSION_NUMBER > 50909
 static R_TH_LOCAL void *py_core_call_cb = NULL;
+#endif
+
+static int py_core_call(void *user, const char *str);
 
 static int py_core_call(void *user, const char *str) {
-	if (py_core_call_cb == NULL) {
+	RListIter *iter;
+	RCorePlugin *cp;
+	if (!Gcore) {
 		return 0;
 	}
-	PyObject *arglist = Py_BuildValue ("(z)", str);
-	PyObject *result = PyObject_CallObject (py_core_call_cb, arglist);
-	if (result) {
-		if (PyLong_Check (result)) {
-			return (int)PyLong_AsLong (result);
-		}
-		if (PyUnicode_Check (result)) {
-			const char *res = PyBytes_AS_STRING (result);
-			if (res != NULL) {
-				r_cons_print (res);
-				return 1;
+	r_list_foreach (Gcore->rcmd->plist, iter, cp) {
+		if (cp->data && cp->call == py_core_call) {
+			void *py_core_call_cb = cp->data;
+			PyObject *arglist = Py_BuildValue ("(z)", str);
+			PyObject *result = PyObject_CallObject (py_core_call_cb, arglist);
+			if (result) {
+				int res = 0;
+				if (PyBool_Check (result)) {
+					if (result == Py_True) {
+						return 1;
+					}
+				} else if (PyLong_Check (result)) {
+					res = (int)PyLong_AsLong (result);
+					if (res) {
+						return res;
+					}
+				} else if (PyUnicode_Check (result)) {
+					const char *res = PyBytes_AS_STRING (result);
+					if (res != NULL) {
+						r_cons_print (res);
+						return 1;
+					}
+				}
 			}
 		}
 	}
@@ -68,7 +86,11 @@ PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 	void *ptr = getF (o, "call");
 	if (ptr) {
 		Py_INCREF (ptr);
+#if R2_VERSION_NUMBER > 50909
 		py_core_call_cb = ptr;
+#else
+		ap->data = ptr;
+#endif
 		ap->call = py_core_call;
 	}
 	Py_DECREF (o);
@@ -79,7 +101,7 @@ PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 		.data = ap,
 		.free = (void (*)(void *data))Radare_plugin_core_free
 	};
-	R_LOG_DEBUG ("PLUGIN[python] Loading core: %s", meta.name);
+	R_LOG_DEBUG ("PLUGIN [python] Loading core: %s", meta.name);
 	r_lib_open_ptr (Gcore->lib, "python-r_core.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }
