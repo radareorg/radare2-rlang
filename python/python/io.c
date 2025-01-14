@@ -14,12 +14,22 @@ typedef struct {
 	void *py_io_close_cb;
 } DescData;
 
+#if R2_VERSION_NUMBER >= 50909
+#define IOPDATA 1
+#else
+#define IOPDATA 0
+#endif
+
 static bool py_io_check(RIO *io, const char *path, bool many);
 
 static bool py_io_check_internal(RIOPlugin *py_io_plugin, RIO *io, const char *path, bool many) {
 	bool res = false;
 	PyObject *arglist = Py_BuildValue ("(zO)", path, many? Py_True: Py_False);
+#if IOPDATA
 	DescData *dd = py_io_plugin->data;
+#else
+	DescData *dd = py_io_plugin->widget;
+#endif
 	if (!dd) {
 		R_LOG_ERROR ("iop.data is nul");
 		return false;
@@ -45,7 +55,6 @@ static RIOPlugin *iop_check(RIO *io, const char *path) {
 			}
 		}
 	}
-				R_LOG_INFO ("noPlugin found");
 	return NULL;
 }
 
@@ -55,7 +64,11 @@ static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 		R_LOG_ERROR ("Cannot find io plugin for %s", path);
 		return NULL;
 	}
+#if IOPDATA
 	DescData *iodd = py_io_plugin->data;
+#else
+	DescData *iodd = py_io_plugin->widget;
+#endif
 	PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
 	PyObject *result = PyObject_CallObject (iodd->py_io_open_cb, arglist);
 	if (!result) { // exception was thrown
@@ -63,7 +76,7 @@ static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 	}
 	Py_DECREF (arglist);
 	Py_INCREF (result);
-	DescData *dd = r_mem_dup (py_io_plugin->data, sizeof (DescData));
+	DescData *dd = r_mem_dup (iodd, sizeof (DescData));
 	dd->result = result;
 	return r_io_desc_new (io, py_io_plugin, path, rw, mode, dd);
 }
@@ -206,7 +219,7 @@ static bool py_io_close(RIODesc *desc) {
 }
 
 void Radare_plugin_io_free(RIOPlugin *ap) {
-#if R2_VERSION_NUMBER > 50909
+#if IOPDATA
 	free (ap->data);
 #endif
 #if R2_VERSION_NUMBER > 50808
@@ -302,7 +315,11 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	dd->py_io_read_cb = py_io_read_cb;
 	dd->py_io_seek_cb = py_io_seek_cb;
 	dd->py_io_close_cb = py_io_close_cb;
+#if IOPDATA
 	ap->data = dd;
+#else
+	ap->widget = dd;
+#endif
 #endif
 
 	RLibStruct lp = {};
