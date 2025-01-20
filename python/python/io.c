@@ -107,7 +107,7 @@ static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
 			}
 			return dd->off;
 		} else {
-			R_LOG_ERROR ("NaN");
+			R_LOG_ERROR ("seek callback returns nothing");
 		}
 		// PyObject_Print (result, stderr, 0);
 		// eprintf ("SEEK Unknown type returned. Number was expected.\n");
@@ -164,7 +164,7 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 			count = (int)limit;
 		}
 	} else {
-		R_LOG_ERROR ("Unknown type returned. List was expected");
+		R_LOG_ERROR ("Nothing returned from the read callback");
 	}
 	Py_DECREF (arglist);
 	Py_DECREF (result);
@@ -173,24 +173,41 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 
 static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 	DescData *dd = desc->data;
-	char * res = NULL;
+	if (R_STR_ISEMPTY (cmd)) {
+		return NULL;
+	}
+	char *res = NULL;
 	if (dd->py_io_system_cb) {
 		PyObject *arglist = Py_BuildValue ("(Oz)", (PyObject *)dd->result, cmd);
+		if (!arglist) {
+			return NULL;
+		}
 		Py_INCREF (arglist);
 		PyObject *result = PyObject_CallObject (dd->py_io_system_cb, arglist);
 		if (result) {
+			const char *ptr = NULL;
 			if (PyUnicode_Check (result)) {
-				res = PyBytes_AS_STRING (result);
+				ssize_t size;
+				const char *ptr = PyUnicode_AsUTF8AndSize (result, &size);
+				if (ptr) {
+					res = strdup (ptr);
+				} else {
+					R_LOG_ERROR ("Cannot parse string tuple");
+				}
 			} else if (PyBool_Check (result)) {
-				res = strdup (r_str_bool (result == Py_True));
+				if (result == Py_False) {
+					res = strdup ("error");
+				}
+				// res = strdup (r_str_bool (result == Py_True));
 			} else if (PyLong_Check (result)) {
 				long n = PyLong_AsLong (result);
 				res = r_str_newf ("%ld", n);
 			} else {
 				R_LOG_ERROR ("Unknown type returned. Boolean was expected");
 			}
+		} else {
+			R_LOG_ERROR ("RLang.Python.System returned None");
 		}
-		// PyObject_Print(result, stderr, 0);
 		Py_DECREF (arglist);
 		Py_DECREF (result);
 	}
@@ -203,11 +220,11 @@ static bool py_io_close(RIODesc *desc) {
 	if (dd && dd->py_io_close_cb) {
 		PyObject *arglist = Py_BuildValue ("(N)", (PyObject *)dd->result);
 		PyObject *result = PyObject_CallObject (dd->py_io_close_cb, arglist);
-		if (PyLong_Check (result)) {
+		if (result && PyLong_Check (result)) {
 			ret = PyLong_AsLong (result);
+			Py_DECREF (result);
 		}
 		Py_DECREF (arglist);
-		Py_DECREF (result);
 #if 0
 		while (Py_REFCNT (dd->result)) { // HACK
 			Py_DECREF (dd->result);
@@ -321,7 +338,6 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	ap->widget = dd;
 #endif
 #endif
-
 	RLibStruct lp = {};
 	lp.type = R_LIB_TYPE_IO;
 	lp.data = ap;
