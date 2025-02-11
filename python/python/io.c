@@ -208,8 +208,12 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 		} else {
 			R_LOG_ERROR ("RLang.Python.System returned None");
 		}
-		Py_DECREF (arglist);
-		Py_DECREF (result);
+		if (arglist) {
+			Py_DECREF (arglist);
+		}
+		if (result) {
+			Py_DECREF (result);
+		}
 	}
 	return res;
 }
