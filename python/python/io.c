@@ -40,7 +40,9 @@ static bool py_io_check_internal(RIOPlugin *py_io_plugin, RIO *io, const char *p
 		res = result == Py_True;
 		Py_DECREF (result);
 	}
-	Py_DECREF (arglist);
+	if (arglist) {
+		Py_DECREF (arglist);
+	}
 	return res;
 }
 
@@ -74,8 +76,12 @@ static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 	if (!result) { // exception was thrown
 		return NULL;
 	}
-	Py_DECREF (arglist);
-	Py_INCREF (result);
+	if (arglist) {
+		Py_DECREF (arglist);
+	}
+	if (result) {
+		Py_INCREF (result);
+	}
 	DescData *dd = r_mem_dup (iodd, sizeof (DescData));
 	dd->result = result;
 	return r_io_desc_new (io, py_io_plugin, path, rw, mode, dd);
@@ -166,8 +172,12 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 	} else {
 		R_LOG_ERROR ("Nothing returned from the read callback");
 	}
-	Py_DECREF (arglist);
-	Py_DECREF (result);
+	if (arglist) {
+		Py_DECREF (arglist);
+	}
+	if (result) {
+		Py_DECREF (result);
+	}
 	return count;
 }
 
@@ -228,7 +238,9 @@ static bool py_io_close(RIODesc *desc) {
 			ret = PyLong_AsLong (result);
 			Py_DECREF (result);
 		}
-		Py_DECREF (arglist);
+		if (arglist) {
+			Py_DECREF (arglist);
+		}
 #if 0
 		while (Py_REFCNT (dd->result)) { // HACK
 			Py_DECREF (dd->result);
@@ -327,7 +339,9 @@ PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	ptr = getF (o, "write");
 	ptr = getF (o, "resize");
 #endif
-	Py_DECREF (o);
+	if (o) {
+		Py_DECREF (o);
+	}
 #if R2_VERSION_NUMBER >= 50909
 	DescData *dd = R_NEW0 (DescData);
 	dd->py_io_open_cb = py_io_open_cb;
