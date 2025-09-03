@@ -8,8 +8,50 @@ R_TH_LOCAL RCore *Gcore = NULL;
 static R_TH_LOCAL void *py_core_call_cb = NULL;
 #endif
 
+#if R2_VERSION_NUMBER > 50909
+static bool py_core_call(RCorePluginSession *s, const char *str);
+#else
 static int py_core_call(void *user, const char *str);
+#endif
 
+#if R2_VERSION_NUMBER > 50909
+static bool py_core_call(RCorePluginSession *s, const char *str) {
+	if (!Gcore) {
+		return false;
+	}
+	if (!py_core_call_cb) {
+		return false;
+	}
+	PyObject *arglist = Py_BuildValue ("(z)", str);
+	PyObject *result = PyObject_CallObject ((PyObject *)py_core_call_cb, arglist);
+	if (result) {
+		int res = 0;
+		if (PyBool_Check (result)) {
+			if (result == Py_True) {
+				Py_DECREF (result);
+				Py_DECREF (arglist);
+				return true;
+			}
+		} else if (PyLong_Check (result)) {
+			res = (int)PyLong_AsLong (result);
+			Py_DECREF (result);
+			Py_DECREF (arglist);
+			return res != 0;
+		} else if (PyUnicode_Check (result)) {
+			const char *resstr = PyBytes_AS_STRING (result);
+			if (resstr != NULL) {
+				r_cons_print (NULL, resstr);
+				Py_DECREF (result);
+				Py_DECREF (arglist);
+				return true;
+			}
+		}
+		Py_XDECREF (result);
+	}
+	Py_XDECREF (arglist);
+	return false;
+}
+#else
 static int py_core_call(void *user, const char *str) {
 	RListIter *iter;
 	RCorePlugin *cp;
@@ -33,9 +75,9 @@ static int py_core_call(void *user, const char *str) {
 						return res;
 					}
 				} else if (PyUnicode_Check (result)) {
-					const char *res = PyBytes_AS_STRING (result);
-					if (res != NULL) {
-						r_cons_print (res);
+					const char *resstr = PyBytes_AS_STRING (result);
+					if (resstr != NULL) {
+						r_cons_print (NULL, resstr);
 						return 1;
 					}
 				}
@@ -44,6 +86,7 @@ static int py_core_call(void *user, const char *str) {
 	}
 	return 0;
 }
+#endif
 
 void Radare_plugin_core_free(RCorePlugin *ap) {
 	if (ap) {
@@ -101,7 +144,11 @@ PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 		.data = ap,
 		.free = (void (*)(void *data))Radare_plugin_core_free
 	};
-	R_LOG_DEBUG ("PLUGIN [python] Loading core: %s", meta.name);
+#if R2_VERSION_NUMBER > 50808
+	R_LOG_DEBUG ("PLUGIN [python] Loading core: %s", ap->meta.name);
+#else
+	R_LOG_DEBUG ("PLUGIN [python] Loading core: %s", ap->name);
+#endif
 	r_lib_open_ptr (Gcore->lib, "python-r_core.py", NULL, &lp);
 	Py_RETURN_TRUE;
 }

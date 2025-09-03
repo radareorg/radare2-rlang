@@ -193,7 +193,7 @@ void py_export_arch_enum(PyObject *tp_dict) {
 
 static bool py_arch_init(RArchSession *as) {
 //	R_LOG_INFO ("py_arch_init called");
-	r_return_val_if_fail (as, false);
+	R_RETURN_VAL_IF_FAIL (as, false);
 	int res = true;	// it's ok if init is missing
 	if (py_arch_init_cb) {
 		PyObject *result = PyObject_CallObject (py_arch_init_cb, NULL);
@@ -212,13 +212,13 @@ static bool py_arch_init(RArchSession *as) {
 static bool py_arch_fini(RArchSession *as) {
 	// is this needed/called?
 	R_LOG_WARN ("py_arch_fini not implemented");
-	r_return_val_if_fail (as, false);
+	R_RETURN_VAL_IF_FAIL (as, false);
 	return true;
 }
 
 static int py_arch_info(RArchSession *as, ut32 q) {
 //	R_LOG_INFO ("py_arch_info called");	
-	r_return_val_if_fail (as, -1);
+	R_RETURN_VAL_IF_FAIL (as, -1);
 	int res = -1;
 	if (py_arch_info_cb) {
 		PyObject *arglist = Py_BuildValue ("(i)", q);
@@ -239,7 +239,7 @@ static int py_arch_info(RArchSession *as, ut32 q) {
 
 static char *py_arch_regs(RArchSession *as) {
 //	R_LOG_INFO ("py_arch_regs called");
-	r_return_val_if_fail (as, NULL);
+	R_RETURN_VAL_IF_FAIL (as, NULL);
 	char *res = NULL;
 	if (py_arch_regs_cb) {
 		PyObject *result = PyObject_CallObject (py_arch_regs_cb, NULL);
@@ -261,7 +261,7 @@ static char *py_arch_regs(RArchSession *as) {
 
 static bool py_arch_encode(RArchSession *as, RAnalOp *op, RArchEncodeMask mask) {
 //	R_LOG_INFO ("py_arch_encode called");
-	r_return_val_if_fail (as && op, false);
+	R_RETURN_VAL_IF_FAIL (as && op, false);
 	bool res = false;
 	if (py_arch_encode_cb) {
 		PyObject *arglist = Py_BuildValue ("(Ks)", op->addr, op->mnemonic);
@@ -292,7 +292,7 @@ static bool py_arch_encode(RArchSession *as, RAnalOp *op, RArchEncodeMask mask) 
 
 static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 //	R_LOG_INFO ("py_arch_decode called");
-	r_return_val_if_fail (as && op, false);
+	R_RETURN_VAL_IF_FAIL (as && op, false);
 	bool res = false;
 	if (py_arch_decode_cb) {
 		Py_buffer pybuf = {
@@ -407,28 +407,28 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 }
 
 static bool py_arch_patch(RArchSession *as, RAnalOp *op, RArchModifyMask mask) {
-	r_return_val_if_fail (as && op, false);
+	R_RETURN_VAL_IF_FAIL (as && op, false);
 	// TODO?
 //	R_LOG_WARN ("py_arch_patch not implemented");
 	return true;
 }
 
 static char *py_arch_mnemonics(RArchSession *as, int id, bool json) {
-	r_return_val_if_fail (as, NULL);
+	R_RETURN_VAL_IF_FAIL (as, NULL);
 	// TODO?
 //	R_LOG_WARN ("py_arch_mnemonics not implemented");
 	return NULL;
 }
 
 static RList *py_arch_preludes(RArchSession *as) {
-	r_return_val_if_fail (as, NULL);
+	R_RETURN_VAL_IF_FAIL (as, NULL);
 	// TODO?
 //	R_LOG_WARN ("py_arch_preludes not implemented");
 	return NULL;
 }
 
 static bool py_arch_esilcb(RArchSession *as, RArchEsilAction action) {
-	r_return_val_if_fail (as, false);
+	R_RETURN_VAL_IF_FAIL (as, false);
 	// TODO?
 //	R_LOG_WARN ("py_arch_esilcb not implemented");
 	return true;
