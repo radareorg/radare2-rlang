@@ -25,9 +25,11 @@ static int r2cmd_tcl(void *clientData, Tcl_Interp *interp, int argc, const char 
 static bool runstr(RLangSession *s, const char *code, int len) {
 	if (Tcl_Eval (interp, code) == TCL_ERROR) {
 		const char *error_msg = Tcl_GetStringResult (interp);
-		R_LOG_ERROR ("Failed to eval %s", error_msg);
+		R_LOG_ERROR ("TCL Error: %s", error_msg);
+		Tcl_ResetResult (interp);
 		return true;
 	}
+	Tcl_ResetResult (interp);
 	return false;
 }
 
@@ -54,20 +56,26 @@ static bool fini(RLangSession *s) {
 
 static bool runfile(RLangSession *s, const char *file) {
 	char *data = r_file_slurp (file, NULL);
-	if (data) {
-		char *line = r_str_newf ("source %s", file);
-		if (Tcl_Eval (interp, line) == TCL_ERROR) {
-			const char *error_msg = Tcl_GetStringResult (interp);
-			R_LOG_ERROR ("Failed to eval: %s", error_msg);
-			free (line);
-			return false;
-		}
+	if (!data) {
+		R_LOG_ERROR ("Failed to slurp file: %s", file);
+		return false;
+	}
+	char *line = r_str_newf ("source %s", file);
+	if (!line) {
+		free (data);
+		return false;
+	}
+	if (Tcl_Eval (interp, line) == TCL_ERROR) {
+		const char *error_msg = Tcl_GetStringResult (interp);
+		R_LOG_ERROR ("TCL Error: %s", error_msg);
 		free (line);
 		free (data);
-		// required to close the TK script properly..
-		fini (s);
-		init (s);
+		Tcl_ResetResult (interp);
+		return false;
 	}
+	free (line);
+	free (data);
+	Tcl_ResetResult (interp);
 	return true;
 }
 
