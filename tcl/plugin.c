@@ -16,7 +16,7 @@ static int r2cmd_tcl(void *clientData, Tcl_Interp *interp, int argc, const char 
 	RCore *core = (RCore *)clientData;
 	if (argc == 2) {
 		char *s = r_core_cmd_str (core, argv[1]);
-		Tcl_SetResult (interp, s, tcl_free);
+		Tcl_SetResult (interp, s, (Tcl_FreeProc *)tcl_free);
 		return TCL_OK;
 	}
 	return TCL_ERROR;
@@ -31,7 +31,7 @@ static bool runstr(RLangSession *s, const char *code, int len) {
 	return false;
 }
 
-static bool init(R_NULLABLE RLangSession *s) {
+static bool init(RLangSession * R_NULLABLE s) {
 	if (s == NULL) {
 		return true;
 	}
