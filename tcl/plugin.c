@@ -1,12 +1,14 @@
-/* lang.tcl plugin for r2 - 2023-2024 - pancake */
+/* lang.tcl plugin for r2 - 2023-2025 - pancake */
 
 #include <r_lib.h>
 #include <r_core.h>
 #include <r_lang.h>
 #include <tcl.h>
 
-static R_TH_LOCAL RCore *Gcore = NULL;
-static R_TH_LOCAL Tcl_Interp *interp = NULL;
+typedef struct {
+	RCore *core;
+	Tcl_Interp *interp;
+} TclPluginContext;
 
 static void tcl_free(char *blockPtr) {
 	free (blockPtr);
@@ -23,6 +25,8 @@ static int r2cmd_tcl(void *clientData, Tcl_Interp *interp, int argc, const char 
 }
 
 static bool runstr(RLangSession *s, const char *code, int len) {
+	TclPluginContext *pluginContext = (TclPluginContext *)s->plugin_data;
+	Tcl_Interp *interp = pluginContext->interp;
 	if (Tcl_Eval (interp, code) == TCL_ERROR) {
 		const char *error_msg = Tcl_GetStringResult (interp);
 		R_LOG_ERROR ("TCL Error: %s", error_msg);
@@ -37,24 +41,26 @@ static bool init(RLangSession * R_NULLABLE s) {
 	if (s == NULL) {
 		return true;
 	}
-	Gcore = s->lang->user;
+	TclPluginContext *pluginContext = R_NEW0 (TclPluginContext);
+	pluginContext->core = s->lang->user;
+	s->plugin_data = pluginContext;
 	int argc = 0;
 	char **argv = NULL;
-	if (interp == NULL) {
-		interp = Tcl_CreateInterp ();
-		Tcl_Init (interp);
-		Tcl_CreateCommand (interp, "r2cmd", r2cmd_tcl, (ClientData) Gcore, NULL);
-	}
+	pluginContext->interp = Tcl_CreateInterp ();
+	Tcl_Init (pluginContext->interp);
+	Tcl_CreateCommand (pluginContext->interp, "r2cmd", r2cmd_tcl, pluginContext->core, NULL);
 	return true;
 }
 
 static bool fini(RLangSession *s) {
-	Tcl_DeleteInterp (interp);
-	interp = NULL;
+	TclPluginContext *pluginContext = (TclPluginContext *)s->plugin_data;
+	Tcl_DeleteInterp (pluginContext->interp);
+	R_FREE (s->plugin_data);
 	return true;
 }
 
 static bool runfile(RLangSession *s, const char *file) {
+	TclPluginContext *pluginContext = (TclPluginContext *)s->plugin_data;
 	char *data = r_file_slurp (file, NULL);
 	if (!data) {
 		R_LOG_ERROR ("Failed to slurp file: %s", file);
@@ -65,6 +71,7 @@ static bool runfile(RLangSession *s, const char *file) {
 		free (data);
 		return false;
 	}
+	Tcl_Interp *interp = pluginContext->interp;
 	if (Tcl_Eval (interp, line) == TCL_ERROR) {
 		const char *error_msg = Tcl_GetStringResult (interp);
 		R_LOG_ERROR ("TCL Error: %s", error_msg);
