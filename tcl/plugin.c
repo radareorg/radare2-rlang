@@ -18,8 +18,7 @@ typedef struct {
 	RList *core_plugins; // list of TclCoreHack*
 } TclPluginContext;
 
-// TODO: remove this global variable, find a way to share the TclPluginContext from the RLangPlugin into the RCorePluginSession
-static R_TH_LOCAL TclPluginContext *Gctx = NULL;
+// Global removed: share context via core->lang->session->plugin_data
 
 static void tcl_free(char *blockPtr) {
 	free (blockPtr);
@@ -45,13 +44,13 @@ static void tcl_corehack_free(void *p) {
 	free (h);
 }
 
-static TclCoreHack *tcl_find_hack(const char *name) {
-	if (!Gctx || !Gctx->core_plugins || !name) {
+static TclCoreHack *tcl_find_hack(TclPluginContext *ctx, const char *name) {
+	if (!ctx || !ctx->core_plugins || !name) {
 		return NULL;
 	}
 	RListIter *it;
 	TclCoreHack *h;
-	r_list_foreach (Gctx->core_plugins, it, h) {
+	r_list_foreach (ctx->core_plugins, it, h) {
 		if (h->name && !strcmp (h->name, name)) {
 			return h;
 		}
@@ -63,7 +62,11 @@ static bool tcl_core_init(RCorePluginSession *cps) {
 	if (!cps || !cps->plugin || !cps->plugin->meta.name) {
 		return false;
 	}
-	TclCoreHack *h = tcl_find_hack (cps->plugin->meta.name);
+	TclPluginContext *ctx = R_UNWRAP4 (cps->core, lang, session, plugin_data);
+	if (!ctx) {
+		return false;
+	}
+	TclCoreHack *h = tcl_find_hack (ctx, cps->plugin->meta.name);
 	if (!h) {
 		return false;
 	}
@@ -201,7 +204,7 @@ static int r2plugin_tcl(void *clientData, Tcl_Interp *interp, int argc, const ch
 	Tcl_DecrRefCount (key);
 
 	// Check duplicate
-	if (tcl_find_hack (name)) {
+	if (tcl_find_hack (ctx, name)) {
 		Tcl_DecrRefCount (callCmd);
 		Tcl_SetResult (interp, "core plugin already registered", TCL_STATIC);
 		return TCL_OK; // mimic other langs: return false-ish; but return OK with message
@@ -261,8 +264,6 @@ static bool init(RLangSession * R_NULLABLE s) {
 	char **argv = NULL;
 	pluginContext->interp = Tcl_CreateInterp ();
 	Tcl_Init (pluginContext->interp);
-	// keep a global reference for core plugin callbacks
-	Gctx = pluginContext;
 	Tcl_CreateCommand (pluginContext->interp, "r2cmd", r2cmd_tcl, pluginContext->core, NULL);
 	Tcl_CreateCommand (pluginContext->interp, "r2plugin", r2plugin_tcl, pluginContext, NULL);
 	return true;
@@ -274,9 +275,6 @@ static bool fini(RLangSession *s) {
 	if (pluginContext->core_plugins) {
 		r_list_free (pluginContext->core_plugins);
 		pluginContext->core_plugins = NULL;
-	}
-	if (Gctx == pluginContext) {
-		Gctx = NULL;
 	}
 	R_FREE (s->plugin_data);
 	return true;
