@@ -44,7 +44,7 @@ pub fn entry(r2 &R2) {
 // helper functions
 
 struct Core {
-	t_pe string [json: @type]
+	t_pe string @[json: @type]
 	file string
 }
 
