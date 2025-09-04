@@ -1,7 +1,7 @@
 package require Tk
 
-source "/tmp/colorutils.tcl"
-source "/tmp/awthemes.tcl"
+# source "/tmp/colorutils.tcl"
+# source "/tmp/awthemes.tcl"
 # source "/tmp/awclearlooks.tcl"
 # source "/tmp/awblack.tcl"
 
