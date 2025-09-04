@@ -1,10 +1,24 @@
-world
-simple hello
- .--.     .--------.
- | _|_    |        |
- | O O   <   hello |
- |  ||    |        |
- | _:|    `--------'
- |   |
- `---'
-
+================== C compilation error (from cc): ==============
+cc:       |                                    ^
+cc: /tmp/v_501/.tmp.01K4AJCKY92DPN9GD9QV518A3H.tmp.so.c:18264:9: error: call to undeclared function 'r2v_register_core'; ISO C99 and later do not support implicit function declarations [-Wimplicit-function-declaration]
+cc:  18264 |         return r2v_register_core(name.str, (voidptr)call, desc.str, license.str);
+cc:        |                ^
+cc: /tmp/v_501/.tmp.01K4AJCKY92DPN9GD9QV518A3H.tmp.so.c:18264:9: note: did you mean 'r2v__R2_register_core'?
+cc: /tmp/v_501/.tmp.01K4AJCKY92DPN9GD9QV518A3H.tmp.so.c:18263:6: note: 'r2v__R2_register_core' declared here
+cc:  18263 | bool r2v__R2_register_core(r2v__R2* core, string name, bool (*call)(r2v__R2* , byteptr ), string desc, string license) {
+cc:        |      ^
+cc:  18264 |         return r2v_register_core(name.str, (voidptr)call, desc.str, license.str);
+cc:        |                ~~~~~~~~~~~~~~~~~
+cc:        |                r2v__R2_register_core
+cc: /tmp/v_501/.tmp.01K4AJCKY92DPN9GD9QV518A3H.tmp.so.c:18268:30: warning: incompatible pointer types passing 'r2v__R2 *' (aka 'struct r2v__R2 *') to parameter of type 'RCore *' (aka 'struct r_core_t *') [-Wincompatible-pointer-types]
+...
+cc: 8 warnings and 1 error generated.
+(note: the original output was 64 lines long; it was truncated to its first 12 lines + the last line)
+================================================================
+(You can pass `-cg`, or `-show-c-output` as well, to print all the C error messages).
+builder error: 
+==================
+C error found. It should never happen, when compiling pure V code.
+This is a V compiler bug, please report it using `v bug file.v`,
+or goto https://github.com/vlang/v/issues/new/choose .
+You can also use #help on Discord: https://discord.gg/vlang .

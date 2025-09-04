@@ -1,0 +1,33 @@
+.tmp.v:54:14: error: unknown method or field: `r2v.R2.register_core`.
+3 possibilities: `cmd`, `free`, `str`.
+   52 | pub fn entry(core &R2) {
+   53 |     // name, callback, desc, license
+   54 |     _ = core.register_core('vcoretest', vcore_call, 'Example core plugin written in V', 'MIT')
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   55 | }
+   56 |
+.tmp.v:54:7: error: assignment mismatch: 1 variable but `register_core()` returns 0 values
+   52 | pub fn entry(core &R2) {
+   53 |     // name, callback, desc, license
+   54 |     _ = core.register_core('vcoretest', vcore_call, 'Example core plugin written in V', 'MIT')
+      |       ^
+   55 | }
+   56 |
+If the code of your project is in multiple files, try with `v .` instead of `v .tmp.v`
+.tmp.v:54:14: error: unknown method or field: `r2v.R2.register_core`.
+3 possibilities: `cmd`, `free`, `str`.
+   52 | pub fn entry(core &R2) {
+   53 |     // name, callback, desc, license
+   54 |     _ = core.register_core('vcoretest', vcore_call, 'Example core plugin written in V', 'MIT')
+      |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   55 | }
+   56 |
+.tmp.v:54:7: error: assignment mismatch: 1 variable but `register_core()` returns 0 values
+   52 | pub fn entry(core &R2) {
+   53 |     // name, callback, desc, license
+   54 |     _ = core.register_core('vcoretest', vcore_call, 'Example core plugin written in V', 'MIT')
+      |       ^
+   55 | }
+   56 |
+If the code of your project is in multiple files, try with `v .` instead of `v .tmp.v`
+ERROR: Panel mode requires scr.interactive=true
