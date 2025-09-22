@@ -1,0 +1,54 @@
+name: Create release from numeric tag on master
+
+on:
+  push:
+    # Trigger for tags that start with a number (e.g. 1.0.0, 2025-01)
+    tags:
+      - '[0-9]*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag and commit
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "TAG=$TAG" >> $GITHUB_ENV
+          COMMIT=$(git rev-list -n 1 "$TAG")
+          echo "COMMIT=$COMMIT" >> $GITHUB_ENV
+
+      - name: Fetch remote master
+        run: git fetch origin master:refs/remotes/origin/master
+
+      - name: Verify tag commit is on master
+        id: verify_on_master
+        run: |
+          if git merge-base --is-ancestor "$COMMIT" origin/master; then
+            echo "on_master=true" >> $GITHUB_OUTPUT
+          else
+            echo "on_master=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Exit if tag is not on master
+        if: steps.verify_on_master.outputs.on_master != 'true'
+        run: |
+          echo "Tag commit $COMMIT is not contained in origin/master. Skipping release."
+          exit 0
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ env.TAG }}
+          release_name: ${{ env.TAG }}
+          body: "Automatic release for tag ${{ env.TAG }}"
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
