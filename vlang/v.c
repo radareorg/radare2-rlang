@@ -5,7 +5,7 @@
 #include <r_lang.h>
 #include <r_list.h>
 
-static const char *r2v_sym = "r2v__entry";
+static const char r2v_sym[] = "r2v__entry";
 
 typedef bool (*VCoreCall)(RCore *core, const char *input);
 
@@ -23,17 +23,21 @@ typedef struct {
 
 static void v_corehack_free(void *p) {
 	VCoreHack *h = (VCoreHack *)p;
-	if (!h) return;
-	free (h->name);
-	// do not close h->lib here; libs list owns the handle
-	free (h);
+	if (h) {
+		free (h->name);
+		free (h);
+	}
 }
 
 static VCoreHack *v_find_hack(VPluginContext *ctx, const char *name) {
-	if (!ctx || !ctx->core_plugins || !name) return NULL;
+	if (!ctx || !ctx->core_plugins || !name) {
+		return NULL;
+	}
 	RListIter *it; VCoreHack *h;
 	r_list_foreach (ctx->core_plugins, it, h) {
-		if (h->name && !strcmp (h->name, name)) return h;
+		if (h->name && !strcmp (h->name, name)) {
+			return h;
+		}
 	}
 	return NULL;
 }
@@ -43,53 +47,55 @@ static VPluginContext *current_ctx = NULL;
 
 static bool lang_v_file(RLangSession *s, const char *file);
 
-static const char *r2v_head = \
-			      "module r2v\n"
-			      "\n";
+static const char *r2v_head = "module r2v\n\n";
 
-			      static const char *r2v_body = \
-							    "#pkgconfig --cflags --libs r_core\n"
-							    "\n"
-							    "#include <r_core.h>\n"
-							    "\n"
-							    "struct R2 {}\n"
-							    "fn C.r_core_cmd_str (core &R2, s byteptr) byteptr\n"
-							    "fn C.r_core_free (core &R2)\n"
-							    "fn C.r_core_new () &R2\n"
-							    "\n"
-							    "// Core plugin registration bridge\n"
-							    "type CoreCallFn = fn(&R2, byteptr) bool\n"
-							    "fn C.r2v_register_core(name byteptr, call CoreCallFn, desc byteptr, license byteptr) bool\n"
-							    "\n"
-							    "pub fn (core &R2)register_core(name string, call CoreCallFn, desc string, license string) bool {\n"
-							    "  return C.r2v_register_core(name.str, call, desc.str, license.str)\n"
-							    "}\n"
-							    "\n"
-							    "pub fn (core &R2)cmd(s string) string {\n"
-							    "  unsafe {\n"
-							    "    o := C.r_core_cmd_str (core, s.str)\n"
-							    "    strs := o.vstring()\n"
-							    "    // free(o)\n"
-							    "    return strs\n"
-							    "  }\n"
-							    "}\n"
-							    "\n"
-							    "pub fn (core &R2)str() string {\n"
-							    "        return i64(core).str()\n"
-							    "}\n"
-							    "\n"
-							    "pub fn (core &R2)free() {\n"
-							    "        unsafe {C.r_core_free (core)}\n"
-							    "}\n"
-							    "\n"
-							    "fn new() &R2 {\n"
-							    "        return C.r_core_new ()\n"
-							    "}\n";
-
-							    typedef struct VParse {
-								    RStrBuf *head;
-								    RStrBuf *body;
-							    } VParse;
+static const char *r2v_body = \
+"#pkgconfig --cflags --libs r_core\n"
+"\n"
+"#include <r_core.h>\n"
+"\n"
+"struct R2 {}\n"
+"fn C.r_core_cmd_str (core &R2, s byteptr) byteptr\n"
+"fn C.r_core_free (core &R2)\n"
+"fn C.r_core_new () &R2\n"
+"\n"
+"// Core plugin registration bridge\n"
+"type CoreCallFn = fn(&R2, byteptr) bool\n"
+"fn C.dlsym(handle voidptr, symbol &char) voidptr\n"
+"fn C.r2v_register_core(name byteptr, call CoreCallFn, desc byteptr, license byteptr) bool\n"
+"type RegisterCore = fn (byteptr, CoreCallFn, byteptr, byteptr) bool\n"
+"\n"
+"pub fn (core &R2)register_core(name string, call CoreCallFn, desc string, license string) bool {\n"
+"  ptr := C.dlsym(0, \"r2v_register_core\".str)\n"
+"  if ptr == voidptr(0) { println(\"Cannot find r2v_register_core\");return false }\n"
+"  rc := RegisterCore(ptr)\n"
+"  return rc(name.str, call, desc.str, license.str)\n"
+"}\n"
+"\n"
+"pub fn (core &R2)cmd(s string) string {\n"
+"  unsafe {\n"
+"    o := C.r_core_cmd_str (core, s.str)\n"
+"    strs := o.vstring()\n"
+"    // free(o)\n"
+"    return strs\n"
+"  }\n"
+"}\n"
+"\n"
+"pub fn (core &R2)str() string {\n"
+"        return i64(core).str()\n"
+"}\n"
+"\n"
+"pub fn (core &R2)free() {\n"
+"        unsafe {C.r_core_free (core)}\n"
+"}\n"
+"\n"
+"fn new() &R2 {\n"
+"        return C.r_core_new ()\n"
+"}\n";
+typedef struct VParse {
+	RStrBuf *head;
+	RStrBuf *body;
+} VParse;
 
 static void vcode_fini(VParse *p) {
 	r_strbuf_free (p->head);
@@ -140,11 +146,11 @@ static void runlib(void *user, const char *lib) {
 		if (fcn) {
 			fcn (user, 0, NULL);
 		} else {
-			eprintf ("Cannot find '%s' symbol in library\n", r2v_sym);
+			R_LOG_ERROR ("Cannot find '%s' symbol in library", r2v_sym);
 		}
 		r_lib_dl_close (vl);
 	} else {
-		eprintf ("Cannot open '%s' library\n", lib);
+		R_LOG_ERROR ("Cannot open '%s' library", lib);
 	}
 }
 
@@ -152,7 +158,7 @@ static bool __run(RLangSession *s, const char *code, int len) {
 	r_file_rm (".tmp.v");
 	FILE *fd = r_sandbox_fopen (".tmp.v", "w");
 	if (!fd) {
-		eprintf ("Cannot open .tmp.v\n");
+		R_LOG_ERROR ("Cannot open .tmp.v");
 		return false;
 	}
 	VParse vcode = vcode_parse (code);
@@ -205,36 +211,39 @@ static bool lang_v_file(RLangSession *s, const char *file) {
 	r_sys_setenv ("PKG_CONFIG_PATH", R2_LIBDIR"/pkgconfig");
 	char *lib = r_str_replace (strdup (file), ".v", "."R_LIB_EXT, 1);
 	char *cmd = r_str_newf ("v -shared %s", file);
+	if (!cmd) {
+		return false;
+	}
 	bool ok = false;
-	if (cmd) {
-		if (r_sandbox_system (cmd, 1) == 0) {
-			// Keep the library open for the session lifetime
-			void *vl = r_lib_dl_open (lib, false);
-			if (vl) {
-				// store handle in session context
-				VPluginContext *ctx = (VPluginContext *)s->plugin_data;
-				if (!ctx) {
-					// create minimal context if init() wasn't called
-					ctx = R_NEW0 (VPluginContext);
-					ctx->core = s->lang->user;
-					s->plugin_data = ctx;
-				}
-				if (!ctx->libs) ctx->libs = r_list_newf (NULL);
-				r_list_append (ctx->libs, vl);
-
-				void (*fcn)(RCore *, int argc, const char **argv) = NULL;
-				fcn = r_lib_dl_sym (vl, r2v_sym);
-				if (fcn) {
-					current_ctx = ctx; // enable registration callbacks
-					fcn (s->lang->user, 0, NULL);
-					current_ctx = NULL;
-					ok = true;
-				} else {
-					eprintf ("Cannot find '%s' symbol in library\n", r2v_sym);
-				}
-			} else {
-				eprintf ("Cannot open '%s' library\n", lib);
+	if (r_sandbox_system (cmd, 1) == 0) {
+		// Keep the library open for the session lifetime
+		void *vl = r_lib_dl_open (lib, false);
+		if (vl) {
+			// store handle in session context
+			VPluginContext *ctx = (VPluginContext *)s->plugin_data;
+			if (!ctx) {
+				// create minimal context if init() wasn't called
+				ctx = R_NEW0 (VPluginContext);
+				ctx->core = s->lang->user;
+				s->plugin_data = ctx;
 			}
+			if (!ctx->libs) {
+				ctx->libs = r_list_newf (NULL);
+			}
+			r_list_append (ctx->libs, vl);
+
+			void (*fcn)(RCore *, int argc, const char **argv) = NULL;
+			fcn = r_lib_dl_sym (vl, r2v_sym);
+			if (fcn) {
+				current_ctx = ctx; // enable registration callbacks
+				fcn (s->lang->user, 0, NULL);
+				current_ctx = NULL;
+				ok = true;
+			} else {
+				R_LOG_ERROR ("Cannot find '%s' symbol in library", r2v_sym);
+			}
+		} else {
+			R_LOG_ERROR ("Cannot open '%s' library", lib);
 		}
 	}
 	free (cmd);
@@ -250,15 +259,19 @@ static bool lang_v_run(RLangSession *s, const char *code, int len) {
 	return __run (s, code, len);
 }
 
-// Core plugin session bridge
 static bool v_core_init(RCorePluginSession *cps) {
-	if (!cps || !cps->plugin || !cps->plugin->meta.name) return false;
+	if (!cps || !cps->plugin || !cps->plugin->meta.name) {
+		return false;
+	}
 	VPluginContext *ctx = R_UNWRAP4 (cps->core, lang, session, plugin_data);
-	if (!ctx) return false;
-	VCoreHack *h = v_find_hack (ctx, cps->plugin->meta.name);
-	if (!h) return false;
-	cps->data = h;
-	return true;
+	if (ctx) {
+		VCoreHack *h = v_find_hack (ctx, cps->plugin->meta.name);
+		if (h) {
+			cps->data = h;
+			return true;
+		}
+	}
+	return false;
 }
 
 static bool v_core_fini(RCorePluginSession *cps) {
@@ -266,21 +279,27 @@ static bool v_core_fini(RCorePluginSession *cps) {
 }
 
 static bool v_core_call(RCorePluginSession *cps, const char *input) {
-	if (!cps || !cps->data) return false;
+	if (!cps || !cps->data) {
+		return false;
+	}
 	VCoreHack *h = (VCoreHack *)cps->data;
-	if (!h->call) return false;
+	if (!h->call) {
+		return false;
+	}
 	return h->call (cps->core, input ? input : "");
 }
 
 static void v_core_plugin_free(RCorePlugin *ap) {
-	if (!ap) return;
-	free ((char *)ap->meta.name);
-	free ((char *)ap->meta.license);
-	free ((char *)ap->meta.desc);
-	free (ap);
+	if (ap) {
+		free ((char *)ap->meta.name);
+		free ((char *)ap->meta.license);
+		free ((char *)ap->meta.desc);
+		free (ap);
+	}
 }
 
-// Exposed to V code: register a core plugin
+/*
+// Rewrite in pure V code: register a core plugin
 R_API bool r2v_register_core(const char *name, VCoreCall call, const char *desc, const char *license) {
 	if (!current_ctx || !current_ctx->core || !name || !*name || !call) {
 		return false;
@@ -319,9 +338,12 @@ R_API bool r2v_register_core(const char *name, VCoreCall call, const char *desc,
 	int ret = r_lib_open_ptr (current_ctx->core->lib, ap->meta.name, NULL, &lp);
 	return ret == 1;
 }
+*/
 
 static bool v_init(RLangSession *s) {
-	if (!s) return true;
+	if (!s) {
+		return true;
+	}
 	VPluginContext *ctx = R_NEW0 (VPluginContext);
 	ctx->core = s->lang->user;
 	s->plugin_data = ctx;
@@ -352,7 +374,7 @@ static bool v_fini(RLangSession *s) {
 static RLangPlugin r_lang_plugin_v = {
 	.meta = {
 		.name = "v",
-		.author = "pancak",
+		.author = "pancake",
 		.license = "MIT",
 		.desc = "V language extension",
 	},
