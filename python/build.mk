@@ -50,3 +50,6 @@ py-install python-install:
 
 py-uninstall python-uninstall:
 	rm -f ${R2PM_PLUGDIR}/lang_python.$(EXT_SO)
+
+test python-test: lang_python.$(EXT_SO)
+	python3 tests/test_python_plugin.py

@@ -138,25 +138,47 @@ void py_export_arch_enum(PyObject *tp_dict) {
 	PYENUM (R_ANAL_STACK_SET);
 	PYENUM (R_ANAL_STACK_RESET);
 	PYENUM (R_ANAL_STACK_ALIGN);
-#if 0
 	// opcode condition, see radare2/libr/include/r_anal/op.h for documentation
-	PYENUM (R_ANAL_COND_AL);
-	PYENUM (R_ANAL_COND_EQ);
-	PYENUM (R_ANAL_COND_NE);
-	PYENUM (R_ANAL_COND_GE);
-	PYENUM (R_ANAL_COND_GT);
-	PYENUM (R_ANAL_COND_LE);
-	PYENUM (R_ANAL_COND_LT);
-	PYENUM (R_ANAL_COND_NV);
-	PYENUM (R_ANAL_COND_HS);
-	PYENUM (R_ANAL_COND_LO);
-	PYENUM (R_ANAL_COND_MI);
-	PYENUM (R_ANAL_COND_PL);
-	PYENUM (R_ANAL_COND_VS);
-	PYENUM (R_ANAL_COND_VC);
-	PYENUM (R_ANAL_COND_HI);
-	PYENUM (R_ANAL_COND_LS);
-#endif
+	PYENUM (R_ANAL_CONDTYPE_AL);
+	PYENUM (R_ANAL_CONDTYPE_EQ);
+	PYENUM (R_ANAL_CONDTYPE_NE);
+	PYENUM (R_ANAL_CONDTYPE_GE);
+	PYENUM (R_ANAL_CONDTYPE_GT);
+	PYENUM (R_ANAL_CONDTYPE_LE);
+	PYENUM (R_ANAL_CONDTYPE_LT);
+	PYENUM (R_ANAL_CONDTYPE_NV);
+	PYENUM (R_ANAL_CONDTYPE_HS);
+	PYENUM (R_ANAL_CONDTYPE_LO);
+	PYENUM (R_ANAL_CONDTYPE_MI);
+	PYENUM (R_ANAL_CONDTYPE_PL);
+	PYENUM (R_ANAL_CONDTYPE_VS);
+	PYENUM (R_ANAL_CONDTYPE_VC);
+	PYENUM (R_ANAL_CONDTYPE_HI);
+	PYENUM (R_ANAL_CONDTYPE_LS);
+#define PYALIAS(alias, value) { \
+		PyObject *o = PyLong_FromLong(value); \
+		if (o) { \
+			PyDict_SetItemString (tp_dict, alias, o); \
+			Py_DECREF (o); \
+		} \
+	}
+	PYALIAS ("R_ANAL_COND_AL", R_ANAL_CONDTYPE_AL);
+	PYALIAS ("R_ANAL_COND_EQ", R_ANAL_CONDTYPE_EQ);
+	PYALIAS ("R_ANAL_COND_NE", R_ANAL_CONDTYPE_NE);
+	PYALIAS ("R_ANAL_COND_GE", R_ANAL_CONDTYPE_GE);
+	PYALIAS ("R_ANAL_COND_GT", R_ANAL_CONDTYPE_GT);
+	PYALIAS ("R_ANAL_COND_LE", R_ANAL_CONDTYPE_LE);
+	PYALIAS ("R_ANAL_COND_LT", R_ANAL_CONDTYPE_LT);
+	PYALIAS ("R_ANAL_COND_NV", R_ANAL_CONDTYPE_NV);
+	PYALIAS ("R_ANAL_COND_HS", R_ANAL_CONDTYPE_HS);
+	PYALIAS ("R_ANAL_COND_LO", R_ANAL_CONDTYPE_LO);
+	PYALIAS ("R_ANAL_COND_MI", R_ANAL_CONDTYPE_MI);
+	PYALIAS ("R_ANAL_COND_PL", R_ANAL_CONDTYPE_PL);
+	PYALIAS ("R_ANAL_COND_VS", R_ANAL_CONDTYPE_VS);
+	PYALIAS ("R_ANAL_COND_VC", R_ANAL_CONDTYPE_VC);
+	PYALIAS ("R_ANAL_COND_HI", R_ANAL_CONDTYPE_HI);
+	PYALIAS ("R_ANAL_COND_LS", R_ANAL_CONDTYPE_LS);
+#undef PYALIAS
 	// opcode direction, see radare2/libr/include/r_anal/op.h for documentation
 	PYENUM (R_ANAL_OP_DIR_READ);
 	PYENUM (R_ANAL_OP_DIR_WRITE);
@@ -210,9 +232,24 @@ static bool py_arch_init(RArchSession *as) {
 }
 
 static bool py_arch_fini(RArchSession *as) {
-	// is this needed/called?
-	R_LOG_WARN ("py_arch_fini not implemented");
-	R_RETURN_VAL_IF_FAIL (as, false);
+	if (!as) {
+		return true;
+	}
+	if (py_arch_fini_cb) {
+		PyObject *result = PyObject_CallObject (py_arch_fini_cb, NULL);
+		if (result) {
+			if (PyBool_Check (result)) {
+				bool ok = result == Py_True;
+				Py_DECREF (result);
+				return ok;
+			}
+			Py_DECREF (result);
+		}
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -264,7 +301,7 @@ static bool py_arch_encode(RArchSession *as, RAnalOp *op, RArchEncodeMask mask) 
 	R_RETURN_VAL_IF_FAIL (as && op, false);
 	bool res = false;
 	if (py_arch_encode_cb) {
-		PyObject *arglist = Py_BuildValue ("(Ks)", op->addr, op->mnemonic);
+		PyObject *arglist = Py_BuildValue ("(Kz)", op->addr, op->mnemonic);
 		PyObject *result = PyObject_CallObject (py_arch_encode_cb, arglist);
 		if (result) {
 			if (PyBytes_Check (result)) {
@@ -303,7 +340,7 @@ static bool py_arch_decode(RArchSession *as, RAnalOp *op, RAnalOpMask mask) {
 			.itemsize = 1
 		};
 		PyObject *memview = PyMemoryView_FromBuffer (&pybuf);
-		PyObject *arglist = Py_BuildValue ("(NKi)", memview, op->addr, mask);
+		PyObject *arglist = Py_BuildValue ("(OKi)", memview, op->addr, mask);
 		PyObject *result = PyObject_CallObject (py_arch_decode_cb, arglist);
 		if (result) {
 			if (PyList_Check (result)) {
@@ -461,14 +498,17 @@ RArchPlugin py_arch_plugin = {
 PyObject *Radare_plugin_arch(Radare* self, PyObject *args) {
 	PyObject *arglist = Py_BuildValue ("(i)", 0);
 	PyObject *o = PyObject_CallObject (args, arglist);
+	Py_DECREF (arglist);
 	if (!o) {
 		return NULL;
 	}
 
-	RArchPlugin *ap = &py_arch_plugin;
+	RArchPlugin *ap = R_NEW0 (RArchPlugin);
 	if (!ap) {
+		Py_DECREF (o);
 		return NULL;
 	}
+	memcpy (ap, &py_arch_plugin, sizeof (py_arch_plugin));
 	RPluginMeta meta = {
 		.name = getS (o, "name"),
 		.license = getS (o, "license"),
@@ -539,7 +579,7 @@ PyObject *Radare_plugin_arch(Radare* self, PyObject *args) {
 	RLibStruct lp = {
 		.type = R_LIB_TYPE_ARCH,
 		.data = ap,
-		.free = (void (*)(void *data))Radare_plugin_core_free
+		.free = (void (*)(void *data))Radare_plugin_arch_free
 	};
 	R_LOG_DEBUG ("PLUGIN[python] Loading arch: %s", meta.name);
 	r_lib_open_ptr (Gcore->lib, "python-r_arch.py", NULL, &lp);

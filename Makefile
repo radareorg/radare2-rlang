@@ -1,6 +1,7 @@
 include config.mk
 
 LANGS?=python duktape lua perl vlang
+TEST_LANGS?=python
 
 # WIP language support
 # LANGS+=csharp
@@ -26,6 +27,4 @@ mrproper clean:
 	for LANG in $(LANGS); do $(MAKE) -C $${LANG} clean ; done
 
 tests test:
-	@echo Nothing to test for now
-#	for LANG in $(LANGS); do $(MAKE) -C $${LANG} test ; done
-
+	for LANG in $(TEST_LANGS); do $(MAKE) -C $${LANG} test ; done

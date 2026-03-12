@@ -67,7 +67,7 @@ static void Radare_dealloc(Radare* self) {
 			Py_XDECREF (self->last);
 		}
 	}
-	// self->ob_type->tp_free((PyObject*)self);
+	Py_TYPE (self)->tp_free ((PyObject *)self);
 }
 
 static PyObject * Radare_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
@@ -94,28 +94,28 @@ static PyObject *Radare_plugin(Radare* self, PyObject *args) {
 	int i;
 
 	if (!PyArg_ParseTuple (args, "sO", &type, &cb)) {
-		return Py_False;
+		return NULL;
 	}
 	if (!PyCallable_Check (cb)) {
 		PyErr_SetString (PyExc_TypeError, "second parameter must be callable");
-		return Py_False;
+		return NULL;
 	}
 	for (i = 0; plugins[i].type; i++) {
 		if (!strcmp (type, plugins[i].type)) {
 			return plugins[i].handler (self, cb);
 		}
 	}
-	R_LOG_INFO ("TODO: r2lang.plugin does not supports '%s' plugins yet", type);
-	return Py_False;
+	R_LOG_INFO ("r2lang.plugin does not support '%s' plugins yet", type);
+	Py_RETURN_FALSE;
 }
 
 static PyObject *Radare_print(Radare* self, PyObject *args) {
     char *cmd = NULL;
     if (!PyArg_ParseTuple (args, "s", &cmd)) {
-        return Py_False;
+        return NULL;
     }
     r_cons_printf (NULL, "%s\n", cmd);
-    return Py_True;
+    Py_RETURN_TRUE;
 }
 
 static PyObject *Radare_cmd(Radare* self, PyObject *args) {
@@ -124,7 +124,9 @@ static PyObject *Radare_cmd(Radare* self, PyObject *args) {
 		return NULL;
 	}
 	char *str = r_core_cmd_str (Gcore, cmd);
-	return PyUnicode_FromString (str? str: py_nullstr);
+	PyObject *res = PyUnicode_FromString (str? str: py_nullstr);
+	free (str);
+	return res;
 }
 
 static int Radare_init(Radare *self, PyObject *args, PyObject *kwds) {
@@ -248,7 +250,11 @@ static PyObject *init_radare_module(void) {
 		return NULL;
 	}
 	Py_INCREF (&RadareType);
-	PyModule_AddObject (m, "R", (PyObject *)&RadareType);
+	if (PyModule_AddObject (m, "R", (PyObject *)&RadareType) < 0) {
+		Py_DECREF (&RadareType);
+		Py_DECREF (m);
+		return NULL;
+	}
 	return m;
 }
 
@@ -266,8 +272,11 @@ static bool prompt(RLangSession *s) {
 		"except:\n"
 		"	pass\n"
 		"import r2lang\n"
-		"import r2pipe\n"
-		"r2 = r2pipe.open()\n"
+		"try:\n"
+		"	import r2pipe\n"
+		"	r2 = r2pipe.open()\n"
+		"except:\n"
+		"	pass\n"
 		"if have_ipy:\n"
 		"	IPython.embed()\n"
 		"else:\n"
@@ -286,7 +295,11 @@ static bool setup(RLangSession *s) {
 		"	from r2.r_core import RCore\n"
 		"except:\n"
 		"	pass\n");
-	PyRun_SimpleString ("import r2pipe");
+	PyRun_SimpleString (
+		"try:\n"
+		"	import r2pipe\n"
+		"except:\n"
+		"	pass\n");
 	Gcore = lang->user;
 	r_list_foreach (lang->defs, iter, def) {
 		if (!def->type || !def->name) {
@@ -326,7 +339,13 @@ static void *init(RLangSession *session) {
 	}
 	// DO NOT INITIALIZE MODULE IF ALREADY INITIALIZED
 	if (Py_IsInitialized ()) {
+#if R2_VERSION_NUMBER > 50808
+		return true;
+#elif R2_VERSION_NUMBER < 50800
+		return lang != NULL;
+#else
 		return NULL;
+#endif
 	}
 	PyImport_AppendInittab ("r2lang", init_radare_module);
 #if R2_VERSION_NUMBER < 50809
@@ -335,11 +354,30 @@ static void *init(RLangSession *session) {
 	Py_Initialize ();
 	// Add a current directory to the PYTHONPATH
 	PyObject *sys = PyImport_ImportModule ("sys");
+	if (!sys) {
+#if R2_VERSION_NUMBER > 50808
+		return false;
+#elif R2_VERSION_NUMBER < 50800
+		return NULL;
+#else
+		return NULL;
+#endif
+	}
 	PyObject *path = PyObject_GetAttrString (sys, "path");
-	PyList_Append (path, PyUnicode_FromString("."));
+	if (path) {
+		PyObject *cwd = PyUnicode_FromString (".");
+		if (cwd) {
+			PyList_Append (path, cwd);
+			Py_DECREF (cwd);
+		}
+	}
+#if R2_VERSION_NUMBER < 50809
+	Py_XDECREF (path);
+#endif
 #if R2_VERSION_NUMBER < 50809
 	return sys;
 #else
+	Py_XDECREF (path);
 	session->plugin_data = sys;
 	return true;
 #endif

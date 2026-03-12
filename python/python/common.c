@@ -3,9 +3,16 @@
 #include "common.h"
 
 bool contains(PyObject *o, const char *name) {
-	if (!o || !name) return false;	
+	if (!o || !name) {
+		return false;
+	}
 	PyObject *str = PyUnicode_FromString (name);
-	return (PyDict_Contains (o, str) == 1);
+	if (!str) {
+		return false;
+	}
+	bool found = PyDict_Contains (o, str) == 1;
+	Py_DECREF (str);
+	return found;
 }
 
 PyObject *getO(PyObject *o, const char *name) {
@@ -35,7 +42,12 @@ void *getF(PyObject *o, const char *name) {
 }
 
 bool getB(PyObject *o, const char *name) {
-	if (!o || o == Py_None) return NULL;
-	if (PyObject_IsTrue (o)) return true;
-	return false;
+	if (!o || o == Py_None) {
+		return false;
+	}
+	PyObject *res = PyDict_GetItemString (o, name);
+	if (!res || res == Py_None) {
+		return false;
+	}
+	return PyObject_IsTrue (res) == 1;
 }

@@ -30,4 +30,5 @@ If you want to build a specific plugin, just cd into the right directory.
 cd python
 make
 make install
+make test
 ```

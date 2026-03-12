@@ -9,7 +9,11 @@ install:
 
 user-install install-home:
 	mkdir -p ${R2PM_PLUGDIR}
-	rm -f $(DESTDIR)/$(R2_PLUGIN_PATH)/`ls *.$(EXT_SO)`
+ifneq ($(NAME),)
+	rm -f $(DESTDIR)/$(R2_PLUGIN_PATH)/$(NAME).$(EXT_SO)
+else
+	rm -f $(DESTDIR)/$(R2_PLUGIN_PATH)/$(shell ls *.$(EXT_SO))
+endif
 	[ -n "`ls *.$(EXT_SO)`" ] && cp -f *.$(EXT_SO) ${R2PM_PLUGDIR} || true
 
 uninstall:

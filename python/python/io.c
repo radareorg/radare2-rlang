@@ -34,11 +34,16 @@ static bool py_io_check_internal(RIOPlugin *py_io_plugin, RIO *io, const char *p
 		R_LOG_ERROR ("iop.data is nul");
 		return false;
 	}
-	Py_INCREF (arglist);
+	if (!dd->py_io_check_cb) {
+		Py_DECREF (arglist);
+		return false;
+	}
 	PyObject *result = PyObject_CallObject (dd->py_io_check_cb, arglist);
 	if (result && PyBool_Check (result)) {
 		res = result == Py_True;
 		Py_DECREF (result);
+	} else if (PyErr_Occurred ()) {
+		PyErr_Print ();
 	}
 	if (arglist) {
 		Py_DECREF (arglist);
@@ -52,7 +57,6 @@ static RIOPlugin *iop_check(RIO *io, const char *path) {
 	ls_foreach (io->plugins, iter, iop) {
 		if (iop->check == py_io_check) {
 			if (py_io_check_internal (iop, io, path, false)) {
-				R_LOG_INFO ("Plugin found");
 				return iop;
 			}
 		}
@@ -73,14 +77,14 @@ static RIODesc* py_io_open(RIO *io, const char *path, int rw, int mode) {
 #endif
 	PyObject *arglist = Py_BuildValue ("(zii)", path, rw, mode);
 	PyObject *result = PyObject_CallObject (iodd->py_io_open_cb, arglist);
-	if (!result) { // exception was thrown
-		return NULL;
-	}
 	if (arglist) {
 		Py_DECREF (arglist);
 	}
-	if (result) {
-		Py_INCREF (result);
+	if (!result) {
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
+		}
+		return NULL;
 	}
 	DescData *dd = r_mem_dup (iodd, sizeof (DescData));
 	dd->result = result;
@@ -98,29 +102,28 @@ static bool py_io_check(RIO *io, const char *path, bool many) {
 static ut64 py_io_seek(RIO *io, RIODesc *fd, ut64 offset, int whence) {
 	DescData *dd = fd->data;
 	if (dd->py_io_seek_cb) {
-		DescData *dd = fd->data;
-		PyObject *arglist = Py_BuildValue ("(NKi)", (PyObject *)dd->result, offset, whence);
+		PyObject *arglist = Py_BuildValue ("(OKi)", (PyObject *)dd->result, offset, whence);
 		if (!arglist) {
 			return UT64_MAX;
 		}
-		Py_INCREF (arglist);
 		PyObject *result = PyObject_CallObject (dd->py_io_seek_cb, arglist);
+		Py_DECREF (arglist);
 		if (result) {
 			if (PyLong_Check (result)) {
-				dd->off = PyLong_AsLong (result);
-			} else if (PyLong_Check (result)) {
-				dd->off = PyLong_AsLongLong (result);
+				dd->off = (ut64)PyLong_AsUnsignedLongLongMask (result);
 			}
+			Py_DECREF (result);
 			return dd->off;
+		}
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
 		} else {
 			R_LOG_ERROR ("seek callback returns nothing");
 		}
-		// PyObject_Print (result, stderr, 0);
-		// eprintf ("SEEK Unknown type returned. Number was expected.\n");
 		switch (whence) {
 		case 0: return dd->off = offset;
 		case 1: return dd->off += offset;
-		case 2: return 512; // wtf is this assumption
+		case 2: return dd->off;
 		}
 		return UT64_MAX;
 	}
@@ -133,7 +136,6 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 		return -1;
 	}
 	PyObject *arglist = Py_BuildValue ("(Oi)", (PyObject *)dd->result, count);
-	Py_INCREF (arglist);
 	PyObject *result = PyObject_CallObject (dd->py_io_read_cb, arglist);
 	if (result) {
 		if (PyByteArray_Check (result)) {
@@ -171,6 +173,9 @@ static int py_io_read(RIO *io, RIODesc *fd, ut8 *buf, int count) {
 		}
 	} else {
 		R_LOG_ERROR ("Nothing returned from the read callback");
+		if (PyErr_Occurred ()) {
+			PyErr_Print ();
+		}
 	}
 	if (arglist) {
 		Py_DECREF (arglist);
@@ -192,10 +197,8 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 		if (!arglist) {
 			return NULL;
 		}
-		Py_INCREF (arglist);
 		PyObject *result = PyObject_CallObject (dd->py_io_system_cb, arglist);
 		if (result) {
-			const char *ptr = NULL;
 			if (PyUnicode_Check (result)) {
 				ssize_t size;
 				const char *ptr = PyUnicode_AsUTF8AndSize (result, &size);
@@ -217,6 +220,9 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 			}
 		} else {
 			R_LOG_ERROR ("RLang.Python.System returned None");
+			if (PyErr_Occurred ()) {
+				PyErr_Print ();
+			}
 		}
 		if (arglist) {
 			Py_DECREF (arglist);
@@ -231,23 +237,24 @@ static char *py_io_system(RIO *io, RIODesc *desc, const char *cmd) {
 static bool py_io_close(RIODesc *desc) {
 	DescData *dd = desc->data;
 	int ret = 0;
-	if (dd && dd->py_io_close_cb) {
-		PyObject *arglist = Py_BuildValue ("(N)", (PyObject *)dd->result);
+	if (!dd) {
+		return false;
+	}
+	if (dd->py_io_close_cb) {
+		PyObject *arglist = Py_BuildValue ("(O)", (PyObject *)dd->result);
 		PyObject *result = PyObject_CallObject (dd->py_io_close_cb, arglist);
 		if (result && PyLong_Check (result)) {
 			ret = PyLong_AsLong (result);
 			Py_DECREF (result);
+		} else if (PyErr_Occurred ()) {
+			PyErr_Print ();
 		}
 		if (arglist) {
 			Py_DECREF (arglist);
 		}
-#if 0
-		while (Py_REFCNT (dd->result)) { // HACK
-			Py_DECREF (dd->result);
-		}
-#endif
-		R_FREE (desc->data);
 	}
+	Py_XDECREF (dd->result);
+	R_FREE (desc->data);
 	return ret != 0;
 }
 
@@ -270,10 +277,15 @@ void Radare_plugin_io_free(RIOPlugin *ap) {
 PyObject *Radare_plugin_io(Radare* self, PyObject *args) {
 	PyObject *arglist = Py_BuildValue("(i)", 0);
 	PyObject *o = PyObject_CallObject (args, arglist);
+	Py_DECREF (arglist);
+	if (!o) {
+		return NULL;
+	}
 
 	RIOPlugin *ap = R_NEW0 (RIOPlugin);
 	if (!ap) {
-		return Py_False;
+		Py_DECREF (o);
+		Py_RETURN_FALSE;
 	}
 #if R2_VERSION_NUMBER > 50808
 	RPluginMeta meta = {

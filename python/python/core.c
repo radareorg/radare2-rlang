@@ -38,7 +38,7 @@ static bool py_core_call(RCorePluginSession *s, const char *str) {
 			Py_DECREF (arglist);
 			return res != 0;
 		} else if (PyUnicode_Check (result)) {
-			const char *resstr = PyBytes_AS_STRING (result);
+			const char *resstr = PyUnicode_AsUTF8 (result);
 			if (resstr != NULL) {
 				r_cons_print (NULL, resstr);
 				Py_DECREF (result);
@@ -47,6 +47,8 @@ static bool py_core_call(RCorePluginSession *s, const char *str) {
 			}
 		}
 		Py_XDECREF (result);
+	} else if (PyErr_Occurred ()) {
+		PyErr_Print ();
 	}
 	Py_XDECREF (arglist);
 	return false;
@@ -67,21 +69,31 @@ static int py_core_call(void *user, const char *str) {
 				int res = 0;
 				if (PyBool_Check (result)) {
 					if (result == Py_True) {
+						Py_DECREF (result);
+						Py_DECREF (arglist);
 						return 1;
 					}
 				} else if (PyLong_Check (result)) {
 					res = (int)PyLong_AsLong (result);
+					Py_DECREF (result);
+					Py_DECREF (arglist);
 					if (res) {
 						return res;
 					}
 				} else if (PyUnicode_Check (result)) {
-					const char *resstr = PyBytes_AS_STRING (result);
+					const char *resstr = PyUnicode_AsUTF8 (result);
 					if (resstr != NULL) {
 						r_cons_print (NULL, resstr);
+						Py_DECREF (result);
+						Py_DECREF (arglist);
 						return 1;
 					}
 				}
+				Py_DECREF (result);
+			} else if (PyErr_Occurred ()) {
+				PyErr_Print ();
 			}
+			Py_DECREF (arglist);
 		}
 	}
 	return 0;
@@ -106,6 +118,7 @@ void Radare_plugin_core_free(RCorePlugin *ap) {
 PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 	PyObject *arglist = Py_BuildValue ("(i)", 0);
 	PyObject *o = PyObject_CallObject (args, arglist);
+	Py_DECREF (arglist);
 	if (o == NULL) {
 		return NULL;
 	}
@@ -137,7 +150,6 @@ PyObject *Radare_plugin_core(Radare* self, PyObject *args) {
 		ap->call = py_core_call;
 	}
 	Py_DECREF (o);
-	Py_DECREF (arglist);
 
 	RLibStruct lp = {
 		.type = R_LIB_TYPE_CORE,
