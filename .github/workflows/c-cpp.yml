@@ -5,25 +5,25 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
+
+env:
+  R2V: 6.0.7
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  python-tests:
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v2
-    - name: radare2
+    - uses: actions/checkout@v6
+    - name: Install build dependencies
       run: |
-          git clone --depth=1 https://github.com/radareorg/radare2
-          cd radare2
-          ./configure --prefix=/usr
-          make
-          sudo make install
-          cd ..
-    - name: configure
-      run: ./configure --prefix=/usr
-    - name: make
-      run: make
-    - name: install
-      run: make install
-    - name: make tests
+        sudo apt-get update
+        sudo apt-get install -y build-essential make pkg-config python3 python3-dev wget
+    - name: Install radare2 release blobs
+      run: |
+        wget https://github.com/radareorg/radare2/releases/download/${{ env.R2V }}/radare2_${{ env.R2V }}_amd64.deb
+        wget https://github.com/radareorg/radare2/releases/download/${{ env.R2V }}/radare2-dev_${{ env.R2V }}_amd64.deb
+        sudo dpkg -i radare2_${{ env.R2V }}_amd64.deb
+        sudo dpkg -i radare2-dev_${{ env.R2V }}_amd64.deb
+    - name: Run Python plugin tests
       run: make tests
