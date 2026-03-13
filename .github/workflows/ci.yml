@@ -25,5 +25,7 @@ jobs:
         wget https://github.com/radareorg/radare2/releases/download/${{ env.R2V }}/radare2-dev_${{ env.R2V }}_amd64.deb
         sudo dpkg -i radare2_${{ env.R2V }}_amd64.deb
         sudo dpkg -i radare2-dev_${{ env.R2V }}_amd64.deb
+    - name: Build Python
+      run: ./configure && make -C python
     - name: Run Python plugin tests
       run: make tests
